@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Calendar</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <h1>AI Calendar</h1>
+      <p class="subtitle">Minimal frontend for manual scheduling</p>
+    </header>
+
+    <main class="main-grid">
+      <section class="card">
+        <h2>Selected Day</h2>
+
+        <div class="field">
+          <label for="selected-date">Date</label>
+          <input type="date" id="selected-date" />
+        </div>
+
+        <div class="toolbar">
+          <button id="load-events-btn">Load Events</button>
+          <button id="today-btn" class="secondary">Today</button>
+        </div>
+
+        <div id="events-summary" class="summary"></div>
+
+        <div id="events-container" class="events-container">
+          <p class="empty-state">No events loaded yet.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Add Event</h2>
+
+        <form id="event-form">
+          <div class="field">
+            <label for="title">Title</label>
+            <input type="text" id="title" required />
+          </div>
+
+          <div class="field">
+            <label for="description">Description</label>
+            <textarea id="description" rows="3"></textarea>
+          </div>
+
+          <div class="two-col">
+            <div class="field">
+              <label for="start-date">Start Date</label>
+              <input type="date" id="start-date" required />
+            </div>
+
+            <div class="field">
+              <label for="start-time">Start Time</label>
+              <input type="time" id="start-time" required />
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div class="field">
+              <label for="end-date">End Date</label>
+              <input type="date" id="end-date" required />
+            </div>
+
+            <div class="field">
+              <label for="end-time">End Time</label>
+              <input type="time" id="end-time" required />
+            </div>
+          </div>
+
+          <div class="field checkbox-row">
+            <input type="checkbox" id="all-day" />
+            <label for="all-day">All day</label>
+          </div>
+
+          <div class="field">
+            <label for="location">Location</label>
+            <input type="text" id="location" />
+          </div>
+
+          <div class="field">
+            <label for="category">Category</label>
+            <select id="category">
+              <option value="">No category</option>
+            </select>
+          </div>
+
+          <div class="toolbar">
+            <button type="submit">Save Event</button>
+            <button type="button" id="clear-form-btn" class="secondary">Clear</button>
+          </div>
+        </form>
+
+        <div id="form-message" class="message"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

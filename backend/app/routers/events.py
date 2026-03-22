@@ -44,10 +44,10 @@ def list_events(
     query = db.query(Event)
 
     if start_from is not None:
-        query = query.filter(Event.start_datetime >= start_from)
+        query = query.filter(Event.end_datetime >= start_from)
 
     if end_to is not None:
-        query = query.filter(Event.end_datetime <= end_to)
+        query = query.filter(Event.start_datetime <= end_to)
 
     if category_id is not None:
         query = query.filter(Event.category_id == category_id)
