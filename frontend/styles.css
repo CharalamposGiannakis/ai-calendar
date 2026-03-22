@@ -178,3 +178,34 @@ button:hover {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.event-toprow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.event-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+button.small {
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+button.danger {
+  background: #dc2626;
+  color: white;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}

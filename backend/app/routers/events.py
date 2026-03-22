@@ -39,6 +39,7 @@ def list_events(
     start_from: datetime | None = Query(default=None),
     end_to: datetime | None = Query(default=None),
     category_id: int | None = Query(default=None),
+    limit: int | None = Query(default=None, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     query = db.query(Event)
@@ -52,7 +53,12 @@ def list_events(
     if category_id is not None:
         query = query.filter(Event.category_id == category_id)
 
-    return query.order_by(Event.start_datetime.asc()).all()
+    query = query.order_by(Event.start_datetime.asc())
+
+    if limit is not None:
+        query = query.limit(limit)
+
+    return query.all()
 
 
 @router.get("/{event_id}", response_model=EventRead)
