@@ -38,6 +38,7 @@ The system should remain expandable for later natural-language, voice, agent, re
 * category existence validation
 * date-window event filtering
 * upcoming-event limit
+* automated pytest API tests for category and event behavior
 * default categories:
 
   * Uni
@@ -126,10 +127,10 @@ The old manually maintained `backend/app/static/` frontend copy has been removed
 * application is accessible from laptop and phone
 * Python compilation sanity check passed
 * frontend single-source verification passes through `scripts/verify_frontend_single_source.ps1`
+* automated API test suite passes: 12 tests
 
 ## Engineering gaps
 
-* no automated tests yet
 * no database migrations yet
 * import tables are not implemented
 * Excel upload is not implemented
@@ -141,11 +142,10 @@ The old manually maintained `backend/app/static/` frontend copy has been removed
 
 Before implementing Excel import:
 
-1. add API tests for event and category behavior
-2. introduce Alembic database migrations
-3. complete `docs/schema_v1.md`
-4. define timezone and all-day semantics
-5. implement import tables
+1. introduce Alembic database migrations
+2. complete `docs/schema_v1.md`
+3. define timezone and all-day semantics
+4. implement import tables
 
 ## Next product milestone
 
@@ -164,4 +164,4 @@ upload Excel
 
 ## Immediate next task
 
-Add API tests for event and category behavior.
+Introduce Alembic database migrations for the existing `categories` and `events` tables.
