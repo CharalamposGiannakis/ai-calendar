@@ -1,215 +1,167 @@
-# Project Status — AI Calendar
+# AI Calendar — Current Project Status
 
-## 1. Project identity
-**Project name:** AI Calendar  
-**GitHub repo:** `ai-calendar`  
-**Local folder:** `C:\Projects\ai_calendar`
+**Last updated:** 19 June 2026
+**Current phase:** Working manual-calendar vertical slice
 
-AI Calendar is a standalone personal calendar application for laptop and phone.  
-It is designed to combine manual scheduling with structured document import, especially from PDF and Excel tables.
+## Project goal
 
----
+Build a standalone personal calendar application for laptop and phone.
 
-## 2. Current project goal
-Build a first working MVP that covers real daily needs before advanced AI features.
+The initial product must support:
 
-### MVP priorities
-- manual event creation
-- event editing and deletion
-- categories such as Uni, Work, Other
-- Excel table import into candidate events
-- PDF table import into candidate events
-- review/approve flow before saving imported events
+* manual event management
+* Excel table import
+* PDF table import
+* review of imported candidate events before approval
 
----
+The system should remain expandable for later natural-language, voice, agent, reminder, and semantic features.
 
-## 3. Main product principles
-- Standalone first
-- Relational database as source of truth
-- Expandable architecture from day one
-- Imported rows must be reviewed before becoming real events
-- Solve personal real use cases first, then add advanced AI features later
+## Source of truth
 
----
+* Repository and Git commits: exact implementation history
+* `AGENTS.md`: permanent Codex working rules
+* `docs/project_status.md`: current operational state
+* `docs/decision_log.md`: important product and architecture decisions
+* `docs/mvp_v1_blueprint.md`: MVP boundaries and product direction
 
-## 4. Agreed system flow
-`input source -> normalized row -> candidate event -> review -> approved event`
+## Implemented
 
-This flow should remain central even when future inputs are added, such as:
-- voice
-- natural language text
-- email
-- screenshots/images
+### Backend
 
----
+* FastAPI application
+* SQLite persistence
+* SQLAlchemy models
+* Pydantic request and response schemas
+* category CRUD
+* event CRUD
+* event time validation
+* category existence validation
+* date-window event filtering
+* upcoming-event limit
+* default categories:
 
-## 5. Current database direction
-### Core tables
-- `events`
-- `categories`
-- `source_documents`
-- `import_batches`
-- `candidate_events`
+  * Uni
+  * Work
+  * Other
+* health endpoint
+* API documentation through FastAPI
+* CORS configuration
+* frontend served through FastAPI
 
-### Strong optional table
-- `import_rows`
+### Frontend
 
-### Table roles
-- `events`: approved real calendar events
-- `categories`: event grouping such as Uni, Work, Other
-- `source_documents`: uploaded file metadata
-- `import_batches`: one import/parsing attempt for one document
-- `candidate_events`: extracted events waiting for approval
-- `import_rows`: raw extracted rows before interpretation
+* `frontend/` is the single editable source of truth
+* FastAPI serves `frontend/index.html` and `frontend/` assets directly
+* responsive manual scheduling interface
+* event creation
+* event editing
+* event deletion
+* compact deletion confirmation
+* category selection
+* selected-date event view
+* upcoming-events view when no date is selected
+* start/end date synchronization
+* all-day event behavior
+* event cards with edit and delete controls
 
----
+### Runtime and access
 
-## 6. Current folder structure
-```text
-ai_calendar/
-├── README.md
-├── .gitignore
-├── docs/
-│   ├── mvp_v1_blueprint.md
-│   ├── architecture.md
-│   ├── schema_v1.md
-│   ├── roadmap.md
-│   └── project_status.md
-├── backend/
-├── frontend/
-├── storage/
-│   ├── db/
-│   ├── uploads/
-│   │   ├── sample/
-│   │   └── runtime/
-│   ├── parsed/
-│   └── exports/
-├── tests/
-│   ├── fixtures/
-│   │   ├── sample_excel/
-│   │   └── sample_pdf/
-│   └── integration/
-└── scripts/
-````
+* one FastAPI server serves both API and frontend
+* frontend uses same-origin API calls for laptop and phone access
+* application works locally at `http://127.0.0.1:8000`
+* application works on a phone connected to the same Wi-Fi
+* PowerShell startup script exists at `scripts/run_app.ps1`
 
----
+## Implemented database tables
 
-## 7. Storage policy
+* `categories`
+* `events`
 
-### Stored in Git
+## Planned import tables
 
-* code
+* `source_documents`
+* `import_batches`
+* `import_rows`
+* `candidate_events`
+
+## Current storage policy
+
+Stored in Git:
+
+* source code
 * documentation
-* schema files
-* small sample files
-* test fixtures
+* scripts
+* synthetic fixtures
+* small sample input files
 
-### Not stored in Git
+Excluded from Git:
 
-* runtime uploads
-* local SQLite database
-* logs
-* cache
+* SQLite runtime database
 * real personal documents
+* runtime uploads
+* generated parsing output
+* logs and caches
+* virtual environments
 
----
+## Frontend serving decision
 
-## 8. What is already done
+`frontend/` is the only editable frontend location.
 
-* project idea clarified
-* standalone approach chosen
-* database chosen over KG for MVP
-* expandable architecture agreed
-* MVP scope defined
-* blueprint created
-* local project moved outside OneDrive
-* local Git repository reinitialized cleanly
-* GitHub repo naming settled as `ai-calendar`
+FastAPI serves:
 
----
+* `/` from `frontend/index.html`
+* `/static/*` from files in `frontend/`
 
-## 9. Current open decisions
+The old manually maintained `backend/app/static/` frontend copy has been removed.
 
-* exact backend package structure inside `backend/`
-* exact schema fields for version 1
-* which calendar UI library to use later, if any
-* whether `import_rows` should be included from the start
+## Verification completed
 
----
+* FastAPI starts successfully
+* API documentation loads
+* categories can be created and listed
+* events can be created and listed
+* events can be edited and deleted
+* SQLite persistence works
+* frontend can communicate with the API
+* application is accessible from laptop and phone
+* Python compilation sanity check passed
+* frontend single-source verification passes through `scripts/verify_frontend_single_source.ps1`
 
-## 10. Current next step
+## Engineering gaps
 
-**Next coding step:** FastAPI + SQLite backend starter
+* no automated tests yet
+* no database migrations yet
+* import tables are not implemented
+* Excel upload is not implemented
+* PDF upload is not implemented
+* architecture, schema, and roadmap documents need completion
+* timezone and all-day storage semantics need an explicit decision
 
-### First backend target
+## Recommended next engineering batch
 
-* create FastAPI app
-* connect SQLite
-* define initial models
-* create `events` and `categories` CRUD
-* make the first working demo:
+Before implementing Excel import:
 
-  * create one manual event
-  * save it
-  * fetch it by date range
+1. add API tests for event and category behavior
+2. introduce Alembic database migrations
+3. complete `docs/schema_v1.md`
+4. define timezone and all-day semantics
+5. implement import tables
 
----
+## Next product milestone
 
-## 11. Near-term roadmap
+Excel import v1:
 
-### Step 1
-
-FastAPI + SQLite starter
-
-### Step 2
-
-Manual event CRUD
-
-### Step 3
-
-Minimal responsive UI
-
-### Step 4
-
-Excel import pipeline
-
-### Step 5
-
-PDF table import pipeline
-
-### Step 6
-
-Candidate review and approval flow
-
----
-
-## 12. Later features
-
-Not part of MVP, but planned as future extensions:
-
-* voice input
-* voice output
-* natural language commands
-* AI scheduling assistant
-* reminders
-* recurrence
-* semantic/KG layer
-* external calendar sync
-
----
-
-## 13. Development rule
-
-The project should always prioritize:
-
-1. correctness of the core calendar system
-2. clean data flow
-3. expandability
-4. real usefulness for personal workflow
-
-Advanced AI features should be added only after the manual event and import backbone is stable.
-
+```text
+upload Excel
+-> store source document
+-> create import batch
+-> preserve raw rows
+-> normalize rows
+-> create candidate events
+-> review candidates
+-> approve selected candidates into events
 ```
 
-A small improvement: after this, update `README.md` so it matches the same wording and current state.
-```
+## Immediate next task
+
+Add API tests for event and category behavior.

@@ -12,7 +12,9 @@ from app.seed import seed_default_categories
 
 import app.models  # noqa: F401
 
-STATIC_DIR = Path(__file__).resolve().parent / "static"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,7 +47,7 @@ app.add_middleware(
 app.include_router(categories.router)
 app.include_router(events.router)
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
 @app.get("/health")
@@ -63,4 +65,4 @@ def api_info():
 
 @app.get("/")
 def serve_frontend():
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(FRONTEND_DIR / "index.html")
