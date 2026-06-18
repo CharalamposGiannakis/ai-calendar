@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.db import Base, SessionLocal, engine
+from app.db import SessionLocal
 from app.routers import categories, events
 from app.seed import seed_default_categories
 
@@ -18,8 +18,6 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-
     db = SessionLocal()
     try:
         seed_default_categories(db)

@@ -31,6 +31,7 @@ The system should remain expandable for later natural-language, voice, agent, re
 * FastAPI application
 * SQLite persistence
 * SQLAlchemy models
+* Alembic database migrations
 * Pydantic request and response schemas
 * category CRUD
 * event CRUD
@@ -39,6 +40,7 @@ The system should remain expandable for later natural-language, voice, agent, re
 * date-window event filtering
 * upcoming-event limit
 * automated pytest API tests for category and event behavior
+* initial migration for `categories` and `events`
 * default categories:
 
   * Uni
@@ -68,6 +70,8 @@ The system should remain expandable for later natural-language, voice, agent, re
 ### Runtime and access
 
 * one FastAPI server serves both API and frontend
+* `scripts/run_app.ps1` runs `alembic upgrade head` before Uvicorn
+* existing development databases must be adopted once with `scripts/adopt_existing_database.ps1`
 * frontend uses same-origin API calls for laptop and phone access
 * application works locally at `http://127.0.0.1:8000`
 * application works on a phone connected to the same Wi-Fi
@@ -128,10 +132,10 @@ The old manually maintained `backend/app/static/` frontend copy has been removed
 * Python compilation sanity check passed
 * frontend single-source verification passes through `scripts/verify_frontend_single_source.ps1`
 * automated API test suite passes: 12 tests
+* migration test verifies upgrade, current, check, and downgrade on temporary SQLite
 
 ## Engineering gaps
 
-* no database migrations yet
 * import tables are not implemented
 * Excel upload is not implemented
 * PDF upload is not implemented
@@ -142,7 +146,7 @@ The old manually maintained `backend/app/static/` frontend copy has been removed
 
 Before implementing Excel import:
 
-1. introduce Alembic database migrations
+1. run the one-time Alembic adoption script for the existing development database
 2. complete `docs/schema_v1.md`
 3. define timezone and all-day semantics
 4. implement import tables
@@ -164,4 +168,4 @@ upload Excel
 
 ## Immediate next task
 
-Introduce Alembic database migrations for the existing `categories` and `events` tables.
+Run the one-time Alembic adoption script for the existing development database, then complete `docs/schema_v1.md`.
