@@ -41,3 +41,6 @@ node_modules/
 .next/
 dist/
 build/
+
+#.md for large prompts
+prompt.md

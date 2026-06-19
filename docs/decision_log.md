@@ -23,3 +23,13 @@
 **Decision:** `frontend/` is the editable frontend source of truth.
 
 **Reason:** Maintaining independent copies in `frontend/` and `backend/app/static/` creates synchronization risk.
+
+---
+
+## 2026-06-19 — Alembic as schema source of truth
+
+**Decision:** Use Alembic migrations as the versioned schema source of truth for the SQLite database.
+
+**Reason:** Runtime `create_all()` hides schema changes and cannot safely evolve existing user data. Migrations make schema changes explicit, reviewable, testable, and adoptable for the existing development database.
+
+**Operational note:** Fresh databases are migrated with `alembic upgrade head`. The existing development database must be backed up, validated, and stamped once with `scripts/adopt_existing_database.ps1` before normal startup.
