@@ -6,12 +6,14 @@ AI Calendar is a standalone personal calendar for laptop and phone. It keeps man
 
 * FastAPI API for category and event CRUD
 * SQLite storage managed by Alembic migrations
+* Explicit Europe/Amsterdam and UTC semantics for timed events
+* Date-only all-day ranges with exclusive end dates
 * Seeded `Uni`, `Work`, and `Other` categories
-* Event time and category validation
-* Date-window filtering and an optional upcoming-event limit
+* DST-safe event validation, date-window filtering, and an optional result limit
+* Import-pipeline foundation tables for source documents, batches, rows, and candidates
 * Responsive, same-origin web interface for creating, editing, deleting, and viewing events
 * One-server startup that works locally and on a phone connected to the same network
-* Isolated pytest coverage for the current API and migration workflow
+* Isolated pytest coverage for API time semantics and migration workflows
 
 The current interface is a selected-day and upcoming-events view. A full day, week, and month calendar view is still planned.
 
@@ -79,7 +81,7 @@ The tests create temporary SQLite databases and do not use the local development
 
 ## Roadmap
 
-The next engineering work is to define timezone and all-day semantics, then introduce the import pipeline tables and Excel import flow. PDF parsing, candidate review, conflict checks, and later AI-assisted features follow from that foundation.
+The next engineering work is safe Excel upload storage, source-document creation, import batches, raw-row extraction, and candidate generation. PDF parsing, candidate review, conflict checks, and later AI-assisted features follow from that foundation.
 
 ## Documentation
 

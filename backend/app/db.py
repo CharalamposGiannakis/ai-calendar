@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -7,7 +8,10 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 DB_DIR = ROOT_DIR / "storage" / "db"
 DB_DIR.mkdir(parents=True, exist_ok=True)
 
-DATABASE_URL = f"sqlite:///{DB_DIR / 'ai_calendar.db'}"
+DATABASE_URL = os.environ.get(
+    "AI_CALENDAR_DATABASE_URL",
+    f"sqlite:///{DB_DIR / 'ai_calendar.db'}",
+)
 
 engine = create_engine(
     DATABASE_URL,
