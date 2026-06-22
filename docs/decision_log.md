@@ -32,4 +32,4 @@
 
 **Reason:** Runtime `create_all()` hides schema changes and cannot safely evolve existing user data. Migrations make schema changes explicit, reviewable, testable, and adoptable for the existing development database.
 
-**Operational note:** Fresh databases are migrated with `alembic upgrade head`. The existing development database must be backed up, validated, and stamped once with `scripts/adopt_existing_database.ps1` before normal startup.
+**Operational note:** Fresh databases are migrated with `alembic upgrade head`. The existing development database has been backed up, validated, and stamped at revision `20260619_0001`. Any legacy database with application tables but no Alembic revision must use `scripts/adopt_existing_database.ps1` before normal startup.

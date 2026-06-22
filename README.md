@@ -1,28 +1,91 @@
 # AI Calendar
 
-AI Calendar is a standalone personal calendar application designed for laptop and phone.
+AI Calendar is a standalone personal calendar for laptop and phone. It keeps manual scheduling in a local relational database today, then grows toward a review-first pipeline for turning structured Excel and PDF schedules into calendar events.
 
-The goal is to create a calendar that is faster and more natural to use than standard calendar apps, especially when schedules already exist inside structured documents such as PDF and Excel files.
+## Current capabilities
 
-## MVP goals
-- Manual event creation, editing, and deletion
-- Categories such as Uni, Work, and Other
-- Import from Excel tables into candidate calendar events
-- Import from PDF tables into candidate calendar events
-- Review and approve imported candidate events before saving
+* FastAPI API for category and event CRUD
+* SQLite storage managed by Alembic migrations
+* Seeded `Uni`, `Work`, and `Other` categories
+* Event time and category validation
+* Date-window filtering and an optional upcoming-event limit
+* Responsive, same-origin web interface for creating, editing, deleting, and viewing events
+* One-server startup that works locally and on a phone connected to the same network
+* Isolated pytest coverage for the current API and migration workflow
 
-## Core design principles
-- Standalone first
-- Expandable architecture
-- Relational database as source of truth
-- Human review before imported events are saved
+The current interface is a selected-day and upcoming-events view. A full day, week, and month calendar view is still planned.
 
-## Planned stack
-- Backend: FastAPI
-- Database: SQLite first, PostgreSQL later if needed
-- Frontend: responsive web UI
-- Future features: natural language input, voice input/output, AI-assisted scheduling
+## Planned MVP
 
-## Project status
-Project setup and MVP blueprint completed.
-Backend starter structure is the next step.
+* Excel table import
+* PDF table import
+* Stored source documents and import batches
+* Reviewable candidate events before approval into the calendar
+* Duplicate and conflict warnings for imported candidates
+
+## Technology
+
+* Python, FastAPI, SQLAlchemy, and Pydantic
+* SQLite with Alembic migrations
+* HTML, CSS, and vanilla JavaScript frontend
+* Pytest and HTTPX for automated API tests
+
+## Project structure
+
+```text
+frontend/                 Editable frontend source served by FastAPI
+backend/app/              FastAPI application, models, routers, and seed data
+backend/alembic/          Versioned database migrations
+scripts/                  Startup, database adoption, verification, and export scripts
+tests/integration/        Isolated API and migration tests
+docs/                     Product, schema, status, and decision documentation
+```
+
+## Setup and run
+
+From the repository root in PowerShell:
+
+```powershell
+py -m venv backend\.venv
+.\backend\.venv\Scripts\Activate.ps1
+python -m pip install -r backend\requirements.txt
+.\scripts\run_app.ps1
+```
+
+The startup script applies migrations before it launches Uvicorn. A fresh database is created automatically. A legacy database that already has `categories` and `events` but no Alembic revision must be adopted once before starting the app:
+
+```powershell
+.\scripts\adopt_existing_database.ps1
+.\scripts\run_app.ps1
+```
+
+Open `http://127.0.0.1:8000` on the laptop. The same server listens on the local network, so a phone on the same Wi-Fi can use `http://<laptop-lan-ip>:8000`.
+
+## Testing
+
+Run the isolated integration suite:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m pytest tests\integration
+```
+
+Run the Python compilation sanity check:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m compileall backend\app
+```
+
+The tests create temporary SQLite databases and do not use the local development database.
+
+## Roadmap
+
+The next engineering work is to define timezone and all-day semantics, then introduce the import pipeline tables and Excel import flow. PDF parsing, candidate review, conflict checks, and later AI-assisted features follow from that foundation.
+
+## Documentation
+
+* [Project overview](docs/project_overview.md)
+* [MVP blueprint](docs/mvp_v1_blueprint.md)
+* [Current project status](docs/project_status.md)
+* [Decision log](docs/decision_log.md)
+* [Schema reference](docs/schema_v1.md)
+* [Contributor instructions](AGENTS.md)

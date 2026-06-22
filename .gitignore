@@ -17,6 +17,12 @@ env/
 .coverage
 htmlcov/
 
+# Local ChatGPT Project Sources mirror export
+.project-sources-export/
+
+# Temporary documentation source, consolidated into docs/project_overview.md
+docs/AI_Calendar_Skeleton.txt
+
 # Local database
 storage/db/*.db
 storage/db/*.sqlite

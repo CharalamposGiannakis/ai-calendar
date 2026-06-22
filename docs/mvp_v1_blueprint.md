@@ -1,127 +1,64 @@
-# AI Calendar — MVP v1 Blueprint
+# AI Calendar - MVP v1 Blueprint
 
-## 1. Project purpose
-AI Calendar is a standalone personal calendar application for laptop and phone.
-Its first goal is to solve a real personal scheduling problem:
-bringing structured schedules from PDF and Excel files into one unified calendar,
-while also supporting fast manual event entry.
+## Purpose
 
-## 2. Core product principles
-- Standalone first: no dependency on Google Calendar as the main engine.
-- Solve the real problem first: import schedules and add events manually.
-- Expandable architecture: future features must fit without redesigning the whole system.
-- Human review before save: imported rows become candidate events first.
-- Relational database as source of truth.
+AI Calendar is a standalone personal calendar for laptop and phone. It brings structured schedules from Excel and PDF files into one calendar while keeping manual event entry quick and dependable.
 
-## 3. MVP scope
-### Included
-- day / week / month calendar view
-- manual event creation
-- event editing
-- event deletion
-- categories: Uni, Work, Other
-- Excel upload and parsing
-- PDF table upload and parsing
-- candidate event review page
-- approve candidate events into real calendar events
-- duplicate warning
-- conflict warning
-- source tracking
+## Product principles
 
-### Excluded
-- voice input/output
-- chat assistant
-- automatic scheduling agent
-- external calendar sync
-- collaboration
-- advanced recurrence
-- knowledge graph as primary storage
+* Standalone first: the application owns its data, interface, and scheduling logic.
+* Relational source of truth: the calendar database is authoritative.
+* Human review: imported data stays reviewable before it becomes a real event.
+* Incremental expansion: solve manual scheduling and structured import before AI assistance.
 
-## 4. Main user flows
-### Flow A — Manual event
-1. User opens calendar
-2. User clicks a date or time slot
-3. User fills event form
-4. Event is saved directly into `events`
-5. Event appears in the calendar
+## Current starting slice
 
-### Flow B — Excel/PDF import
-1. User uploads file
-2. File metadata is stored in `source_documents`
-3. System creates `import_batch`
-4. Parser extracts rows
-5. Rows become `candidate_events`
-6. User reviews and edits candidates
-7. Approved candidates become `events`
+The implemented baseline supports categories, manual event CRUD, date-window queries, and a responsive selected-day or upcoming-events interface. It is intentionally not yet a full day, week, or month calendar.
 
-## 5. Internal pipeline
+## MVP target
+
+### Manual calendar
+
+* create, edit, delete, and filter events
+* assign categories
+* use the interface from laptop or phone
+* provide day, week, and month calendar views
+
+### Structured import
+
+* upload Excel tables and table-like PDFs
+* store source-document metadata and each import attempt
+* preserve raw import rows where useful for traceability
+* normalize rows into candidate events
+* review, correct, approve, or reject candidates before creating real events
+* warn about likely duplicates and conflicts
+
+## Shared import pipeline
+
+```text
 input source -> normalized row -> candidate event -> review -> approved event
+```
 
-## 6. Database v1
-### Required tables
-- events
-- categories
-- source_documents
-- import_batches
-- candidate_events
+The pipeline is designed so later input types, including natural-language text, voice, email, or images, can enter through the same reviewable path without changing the calendar's source of truth.
 
-### Strongly recommended optional table
-- import_rows
+## Data direction
 
-## 7. Recommended table responsibilities
-### categories
-Stores event categories such as Uni, Work, Other.
+The current schema contains `categories` and `events`. Import work will add `source_documents`, `import_batches`, `import_rows`, and `candidate_events` through migrations when that workflow begins. Detailed current fields and constraints belong in `docs/schema_v1.md` and Alembic migrations.
 
-### source_documents
-Stores uploaded file metadata and file identity.
+## Not in MVP
 
-### import_batches
-Stores one parsing/import attempt for a source document.
+* external calendar synchronization
+* collaboration or multi-user features
+* advanced recurrence
+* voice input/output
+* conversational scheduling assistant
+* automatic schedule optimization
+* knowledge graph as primary storage
 
-### candidate_events
-Stores extracted event candidates before approval.
+## Near-term implementation order
 
-### events
-Stores approved real calendar events.
-
-### import_rows
-Stores raw extracted rows before interpretation, useful for debugging and future parser upgrades.
-
-## 8. First technical milestone
-The first working demo is:
-- open app
-- manually create one event
-- save to SQLite
-- fetch events by date range
-- show them in a simple calendar/list view
-
-## 9. First implementation order
-1. Define schema v1
-2. Create FastAPI + SQLite starter backend
-3. Implement categories and event CRUD
-4. Build minimal responsive UI
-5. Add Excel import
-6. Add PDF table import
-7. Add candidate review flow
-
-## 10. Storage policy
-### Stored in Git
-- code
-- docs
-- schema
-- sample test files
-- fixtures
-
-### Not stored in Git
-- runtime uploads
-- local SQLite database
-- logs
-- cache
-- personal real documents
-
-## 11. Success criteria for MVP
-The MVP is successful if:
-- manual event entry is easy on laptop and phone
-- Excel/PDF schedules can be converted into reviewable candidate events
-- approved items become real events reliably
-- the system stays modular enough for future AI features
+1. Define timezone and all-day semantics.
+2. Add the import pipeline tables through Alembic.
+3. Implement Excel import and candidate review.
+4. Add PDF table import.
+5. Add duplicate and conflict warnings.
