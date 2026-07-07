@@ -1,7 +1,7 @@
 # AI Calendar - Current Project Status
 
 **Last updated:** 7 July 2026
-**Current phase:** Manual-calendar vertical slice with initial Excel upload storage
+**Current phase:** Manual-calendar vertical slice with Excel upload and raw-row extraction
 
 ## Implemented
 
@@ -24,6 +24,8 @@
 * safe `.xlsx` upload endpoint that stores files under `storage/uploads/runtime`
 * source-document metadata creation with SHA-256 checksums and relative storage paths
 * pending import-batch creation for each accepted upload
+* Excel raw-row extraction into `import_rows` using `openpyxl`
+* compact JSON preservation of non-empty Excel rows with source worksheet/row locators
 * seeded Uni, Work, and Other categories
 
 ### Frontend and runtime
@@ -35,21 +37,20 @@
 
 ## Verification completed
 
-* 38 isolated integration tests pass, covering API time semantics, DST behavior, upload storage, import metadata creation, migration conversion, constraints, and import-schema downgrade
+* 46 isolated integration tests pass, covering API time semantics, DST behavior, upload storage, Excel raw-row extraction, import metadata creation, migration conversion, constraints, and import-schema downgrade
 * Alembic upgrade, check, and downgrade pass on temporary SQLite databases
 * a disposable copy of the development database upgraded to `20260623_0003` with 5 retained events: 3 all-day, 2 timed, and 5 valid time shapes
 * Python compilation and frontend single-source checks pass
 
 ## Current limitations
 
-* Excel upload storage exists, but Excel row extraction is not implemented
+* Excel upload storage and raw-row extraction exist, but candidate generation is not implemented
 * no PDF parsing
-* no `import_rows` or `candidate_events` creation from uploaded files
+* no `candidate_events` creation from uploaded files
 * no candidate review or approval endpoints
 * no timezone selector or user settings table
 * day, week, and month calendar views are not implemented
-* manual laptop and phone verification remains required for frontend changes
 
 ## Immediate next task
 
-Implement Excel row extraction for stored `.xlsx` files: create `import_rows`, generate reviewable `candidate_events`, and keep approval into real events out of scope.
+Generate reviewable `candidate_events` from extracted Excel `import_rows`, keeping approval into real events out of scope.

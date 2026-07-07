@@ -58,10 +58,21 @@ def validate_xlsx_filename(filename: str | None) -> str:
 
 
 def path_for_storage_path(storage_dir: Path, storage_path: str) -> Path:
+    storage_dir = storage_dir.resolve()
     relative_path = PurePosixPath(storage_path)
-    if relative_path.is_absolute() or ":" in storage_path or ".." in relative_path.parts:
+    if (
+        storage_path.strip() == ""
+        or relative_path.is_absolute()
+        or ":" in storage_path
+        or ".." in relative_path.parts
+    ):
         raise UploadValidationError("Storage path must be relative.")
-    return storage_dir.joinpath(*relative_path.parts)
+    resolved_path = storage_dir.joinpath(*relative_path.parts).resolve()
+    try:
+        resolved_path.relative_to(storage_dir)
+    except ValueError as error:
+        raise UploadValidationError("Storage path must stay inside storage.") from error
+    return resolved_path
 
 
 async def store_excel_upload(upload: UploadFile, storage_dir: Path) -> StoredUpload:

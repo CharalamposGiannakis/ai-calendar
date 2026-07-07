@@ -8,7 +8,7 @@ Alembic migrations are authoritative. The current schema head is `20260623_0003`
 20260619_0001 -> 20260623_0002 -> 20260623_0003
 ```
 
-`20260623_0002` defines explicit event time semantics. `20260623_0003` adds the import-pipeline foundation tables. The application now has initial `.xlsx` upload storage and metadata creation; parsing, review, and approval endpoints remain future work.
+`20260623_0002` defines explicit event time semantics. `20260623_0003` adds the import-pipeline foundation tables. The application now has initial `.xlsx` upload storage, metadata creation, and raw-row extraction; candidate generation, review, and approval endpoints remain future work.
 
 ## Shared time rules
 
@@ -64,9 +64,9 @@ Named checks require exactly one shape:
 
 ### Import batches and rows
 
-`import_batches` represents one import attempt for a source document. Initial uploads create a linked batch with status `pending`; parsing later moves batches through `processing`, `ready_for_review`, `completed`, or `failed`. Row and candidate counters are non-negative.
+`import_batches` represents one import attempt for a source document. Initial uploads create a linked batch with status `pending`; raw Excel row extraction moves the batch to `processing` because candidate generation has not happened yet. Later parsing and review work can move batches through `ready_for_review`, `completed`, or `failed`. Row and candidate counters are non-negative.
 
-`import_rows` preserves raw extracted material as text. Its parse statuses are `pending`, `parsed`, `skipped`, and `failed`, and `(import_batch_id, row_index)` is unique.
+`import_rows` preserves raw extracted material. For Excel extraction, each non-empty row from the first visible worksheet is stored with the real Excel row number, compact JSON row values in `raw_text` and `raw_data_json`, a compact JSON worksheet/row locator in `source_locator_json`, and parse status `parsed`. Its parse statuses are `pending`, `parsed`, `skipped`, and `failed`, and `(import_batch_id, row_index)` is unique.
 
 ### Candidate events
 

@@ -12,6 +12,7 @@ AI Calendar is a standalone personal calendar for laptop and phone. It keeps man
 * DST-safe event validation, date-window filtering, and an optional result limit
 * Import-pipeline foundation tables for source documents, batches, rows, and candidates
 * Safe `.xlsx` upload storage with source-document metadata and pending import batches
+* Raw Excel row extraction into `import_rows`
 * Responsive, same-origin web interface for creating, editing, deleting, and viewing events
 * One-server startup that works locally and on a phone connected to the same network
 * Isolated pytest coverage for API time semantics and migration workflows
@@ -20,7 +21,7 @@ The current interface is a selected-day and upcoming-events view. A full day, we
 
 ## Planned MVP
 
-* Excel row extraction and candidate generation
+* Excel candidate generation
 * PDF table import
 * Reviewable candidate events before approval into the calendar
 * Duplicate and conflict warnings for imported candidates
@@ -81,7 +82,7 @@ The tests create temporary SQLite databases and do not use the local development
 
 ## Roadmap
 
-The next engineering work is Excel row extraction, import-row preservation, and reviewable candidate generation from stored uploads. PDF parsing, candidate review, conflict checks, and later AI-assisted features follow from that foundation.
+The next engineering work is reviewable candidate generation from extracted Excel rows. PDF parsing, candidate review, conflict checks, and later AI-assisted features follow from that foundation.
 
 ## Documentation
 

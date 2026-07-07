@@ -63,6 +63,33 @@ class ExcelUploadResponse(BaseModel):
     import_batch: ImportBatchRead
 
 
+class ImportRowRead(BaseModel):
+    id: int
+    import_batch_id: int
+    row_index: int
+    source_locator_json: str | None = None
+    raw_text: str | None = None
+    raw_data_json: str | None = None
+    parse_status: str
+    error_message: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExtractedRowPreview(BaseModel):
+    row_index: int
+    values: list[Any]
+
+
+class ExcelRowExtractionResponse(BaseModel):
+    batch_id: int
+    source_document_id: int
+    worksheet_name: str
+    rows_extracted: int
+    row_preview: list[ExtractedRowPreview]
+
+
 def normalize_event_shape(data: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(data)
     all_day = normalized.get("all_day", False)
