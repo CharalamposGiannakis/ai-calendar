@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.db import SessionLocal
-from app.routers import categories, events
+from app.routers import categories, events, imports
 from app.seed import seed_default_categories
 
 import app.models  # noqa: F401
@@ -44,6 +44,7 @@ app.add_middleware(
 
 app.include_router(categories.router)
 app.include_router(events.router)
+app.include_router(imports.router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 

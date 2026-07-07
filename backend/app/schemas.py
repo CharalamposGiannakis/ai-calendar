@@ -28,6 +28,41 @@ class CategoryRead(CategoryBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SourceDocumentRead(BaseModel):
+    id: int
+    original_filename: str
+    storage_path: str
+    file_type: str
+    mime_type: str | None = None
+    size_bytes: int
+    sha256_checksum: str
+    uploaded_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ImportBatchRead(BaseModel):
+    id: int
+    source_document_id: int
+    status: str
+    parser_name: str | None = None
+    parser_version: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    total_rows_detected: int
+    total_candidate_events: int
+    error_message: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExcelUploadResponse(BaseModel):
+    source_document: SourceDocumentRead
+    import_batch: ImportBatchRead
+
+
 def normalize_event_shape(data: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(data)
     all_day = normalized.get("all_day", False)

@@ -1,7 +1,7 @@
 # AI Calendar - Current Project Status
 
-**Last updated:** 23 June 2026
-**Current phase:** Manual-calendar vertical slice with import-schema foundation
+**Last updated:** 7 July 2026
+**Current phase:** Manual-calendar vertical slice with initial Excel upload storage
 
 ## Implemented
 
@@ -21,6 +21,9 @@
 * migrations `20260619_0001`, `20260623_0002`, and `20260623_0003`
 * `categories`, `events`, `source_documents`, `import_batches`, `import_rows`, and `candidate_events` tables
 * nullable unique event-to-candidate provenance link
+* safe `.xlsx` upload endpoint that stores files under `storage/uploads/runtime`
+* source-document metadata creation with SHA-256 checksums and relative storage paths
+* pending import-batch creation for each accepted upload
 * seeded Uni, Work, and Other categories
 
 ### Frontend and runtime
@@ -32,20 +35,21 @@
 
 ## Verification completed
 
-* 30 isolated integration tests pass, covering API time semantics, DST behavior, migration conversion, constraints, and import-schema downgrade
+* 38 isolated integration tests pass, covering API time semantics, DST behavior, upload storage, import metadata creation, migration conversion, constraints, and import-schema downgrade
 * Alembic upgrade, check, and downgrade pass on temporary SQLite databases
 * a disposable copy of the development database upgraded to `20260623_0003` with 5 retained events: 3 all-day, 2 timed, and 5 valid time shapes
 * Python compilation and frontend single-source checks pass
 
 ## Current limitations
 
-* no file-upload endpoints or storage workflow
-* no Excel or PDF parsing
+* Excel upload storage exists, but Excel row extraction is not implemented
+* no PDF parsing
+* no `import_rows` or `candidate_events` creation from uploaded files
 * no candidate review or approval endpoints
 * no timezone selector or user settings table
 * day, week, and month calendar views are not implemented
-* the in-app browser was unavailable for this session's manual frontend check; manual laptop and phone verification remains required
+* manual laptop and phone verification remains required for frontend changes
 
 ## Immediate next task
 
-Begin the Excel import flow: safe upload storage, source-document creation, import-batch creation, raw-row extraction, and candidate-event generation. Keep candidates reviewable; do not approve them into events yet.
+Implement Excel row extraction for stored `.xlsx` files: create `import_rows`, generate reviewable `candidate_events`, and keep approval into real events out of scope.

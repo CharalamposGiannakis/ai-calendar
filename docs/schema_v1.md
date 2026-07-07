@@ -8,7 +8,7 @@ Alembic migrations are authoritative. The current schema head is `20260623_0003`
 20260619_0001 -> 20260623_0002 -> 20260623_0003
 ```
 
-`20260623_0002` defines explicit event time semantics. `20260623_0003` adds the import-pipeline foundation only; it does not add upload, parsing, review, or approval endpoints.
+`20260623_0002` defines explicit event time semantics. `20260623_0003` adds the import-pipeline foundation tables. The application now has initial `.xlsx` upload storage and metadata creation; parsing, review, and approval endpoints remain future work.
 
 ## Shared time rules
 
@@ -55,7 +55,7 @@ Named checks require exactly one shape:
 
 ### Source documents
 
-`source_documents` stores metadata for future files on disk.
+`source_documents` stores metadata for uploaded files on disk. The initial Excel upload route stores accepted files under the relative `uploads/runtime/` path prefix and records one source document per upload.
 
 * required original filename, unique relative `storage_path`, file type, non-negative byte size, and indexed SHA-256 checksum;
 * optional MIME type;
@@ -64,7 +64,7 @@ Named checks require exactly one shape:
 
 ### Import batches and rows
 
-`import_batches` represents one import attempt for a source document. Its statuses are `pending`, `processing`, `ready_for_review`, `completed`, and `failed`; row and candidate counters are non-negative.
+`import_batches` represents one import attempt for a source document. Initial uploads create a linked batch with status `pending`; parsing later moves batches through `processing`, `ready_for_review`, `completed`, or `failed`. Row and candidate counters are non-negative.
 
 `import_rows` preserves raw extracted material as text. Its parse statuses are `pending`, `parsed`, `skipped`, and `failed`, and `(import_batch_id, row_index)` is unique.
 
