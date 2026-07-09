@@ -5,6 +5,7 @@ from openpyxl import __version__ as openpyxl_version
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.candidate_warnings import CandidateWarning, warnings_for_candidates
 from app.db import get_db
 from app.excel_candidates import (
     CandidateGenerationError,
@@ -94,7 +95,21 @@ def _source_document_path(batch: ImportBatch, storage_dir: Path) -> Path:
     return workbook_path
 
 
-def _candidate_payload(candidate: CandidateEvent) -> dict:
+def _candidate_warning_payload(warning: CandidateWarning) -> dict:
+    return {
+        "type": warning.type,
+        "message": warning.message,
+        "event_id": warning.event_id,
+        "event_title": warning.event_title,
+        "event_start": warning.event_start,
+        "event_end": warning.event_end,
+    }
+
+
+def _candidate_payload(
+    candidate: CandidateEvent,
+    warnings: list[CandidateWarning] | None = None,
+) -> dict:
     return {
         "id": candidate.id,
         "import_batch_id": candidate.import_batch_id,
@@ -113,6 +128,9 @@ def _candidate_payload(candidate: CandidateEvent) -> dict:
         "review_status": candidate.review_status,
         "was_edited": candidate.was_edited,
         "review_notes": candidate.review_notes,
+        "warnings": [
+            _candidate_warning_payload(warning) for warning in (warnings or [])
+        ],
         "created_at": candidate.created_at,
         "updated_at": candidate.updated_at,
     }
@@ -480,13 +498,18 @@ def list_import_candidates(batch_id: int, db: Session = Depends(get_db)):
         .order_by(ImportRow.row_index.asc(), CandidateEvent.id.asc())
         .all()
     )
-    return [_candidate_payload(candidate) for candidate in candidates]
+    warning_map = warnings_for_candidates(candidates, db)
+    return [
+        _candidate_payload(candidate, warning_map.get(candidate.id, []))
+        for candidate in candidates
+    ]
 
 
 @router.get("/candidates/{candidate_id}", response_model=CandidateEventRead)
 def get_import_candidate(candidate_id: int, db: Session = Depends(get_db)):
     candidate = _get_candidate_or_404(candidate_id, db)
-    return _candidate_payload(candidate)
+    warning_map = warnings_for_candidates([candidate], db)
+    return _candidate_payload(candidate, warning_map.get(candidate.id, []))
 
 
 @router.patch("/candidates/{candidate_id}", response_model=CandidateEventRead)

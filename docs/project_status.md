@@ -1,7 +1,7 @@
 # AI Calendar - Current Project Status
 
 **Last updated:** 9 July 2026
-**Current phase:** Manual-calendar vertical slice with browser Excel import review
+**Current phase:** Manual-calendar vertical slice with backend import warning support
 
 ## Implemented
 
@@ -30,6 +30,7 @@
 * pending `candidate_events` creation with row-level provenance and category-name matching
 * backend candidate fetch, edit, reject, and transactional approval endpoints
 * approved import candidates create real `events` with `source_type = import`
+* dynamic backend duplicate and conflict warnings for import candidates against active events
 * seeded Uni, Work, and Other categories
 
 ### Frontend and runtime
@@ -42,7 +43,7 @@
 
 ## Verification completed
 
-* 70 isolated integration tests pass, covering API time semantics, DST behavior, upload storage, Excel raw-row extraction, Excel candidate generation, candidate review/approval, import metadata creation, migration conversion, constraints, and import-schema downgrade
+* 81 isolated integration tests pass, covering API time semantics, DST behavior, upload storage, Excel raw-row extraction, Excel candidate generation, candidate review/approval, import candidate warnings, import metadata creation, migration conversion, constraints, and import-schema downgrade
 * Alembic upgrade, check, and downgrade pass on temporary SQLite databases
 * a disposable copy of the development database upgraded to `20260623_0003` with 5 retained events: 3 all-day, 2 timed, and 5 valid time shapes
 * Python compilation and frontend single-source checks pass
@@ -50,10 +51,10 @@
 ## Current limitations
 
 * no PDF parsing
-* no duplicate or conflict warnings
+* no frontend display for duplicate or conflict warnings
 * no timezone selector or user settings table
 * day, week, and month calendar views are not implemented
 
 ## Immediate next task
 
-Add PDF table import on the existing review-first import pipeline.
+Surface duplicate and conflict warnings in the frontend import-review UI.

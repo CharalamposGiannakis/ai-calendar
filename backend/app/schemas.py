@@ -1,7 +1,7 @@
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, field_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.time_utils import TimeSemanticsError, get_timezone, normalize_timed_datetime
 
@@ -90,6 +90,15 @@ class ExcelRowExtractionResponse(BaseModel):
     row_preview: list[ExtractedRowPreview]
 
 
+class CandidateWarningRead(BaseModel):
+    type: Literal["duplicate", "conflict"]
+    message: str
+    event_id: int
+    event_title: str
+    event_start: str
+    event_end: str
+
+
 class CandidateEventRead(BaseModel):
     id: int
     import_batch_id: int
@@ -108,6 +117,7 @@ class CandidateEventRead(BaseModel):
     review_status: str
     was_edited: bool
     review_notes: str | None = None
+    warnings: list[CandidateWarningRead] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 

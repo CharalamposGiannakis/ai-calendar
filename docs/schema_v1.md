@@ -8,7 +8,7 @@ Alembic migrations are authoritative. The current schema head is `20260623_0003`
 20260619_0001 -> 20260623_0002 -> 20260623_0003
 ```
 
-`20260623_0002` defines explicit event time semantics. `20260623_0003` adds the import-pipeline foundation tables. The application now has initial `.xlsx` upload storage, metadata creation, raw-row extraction, candidate generation, and backend candidate review/approval.
+`20260623_0002` defines explicit event time semantics. `20260623_0003` adds the import-pipeline foundation tables. The application now has initial `.xlsx` upload storage, metadata creation, raw-row extraction, candidate generation, backend candidate review/approval, and dynamic candidate warnings.
 
 ## Shared time rules
 
@@ -75,6 +75,8 @@ Named checks require exactly one shape:
 Excel candidate generation treats the first extracted row as headers, maps flexible header aliases, and creates pending candidates from subsequent valid rows. Timed candidates are normalized to UTC with the supplied timezone or `Europe/Amsterdam`; all-day candidates use inclusive source dates converted to exclusive internal `end_date` values. Matching category names are resolved case-insensitively; unknown categories leave `category_id` null. Invalid data rows are marked failed while valid rows can still produce candidates. A batch with generated candidates moves to `ready_for_review`.
 
 Pending candidates can be edited with the same timed/all-day validation rules, rejected, or approved. Approval creates one real `events` row with `source_type = import`, `status = active`, and `candidate_event_id` pointing back to the approved candidate, then marks the candidate `approved`. Rejection creates no event. If every candidate in a batch is approved or rejected, the batch moves to `completed`.
+
+Candidate duplicate and conflict warnings are computed dynamically when candidates are fetched or listed. They are not stored in the schema. Warnings compare candidates to existing active events using the same half-open timed and all-day interval semantics, including mixed timed/all-day overlap checks.
 
 Import provenance is restrictive by default: source documents, batches, rows, and candidates do not silently cascade away. An approved event remains traceable through:
 
