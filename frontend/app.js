@@ -27,9 +27,24 @@ const endTimeField = document.getElementById("end-time-field");
 const locationInput = document.getElementById("location");
 const categorySelect = document.getElementById("category");
 
+const excelFileInput = document.getElementById("excel-file");
+const uploadExcelBtn = document.getElementById("upload-excel-btn");
+const extractRowsBtn = document.getElementById("extract-rows-btn");
+const generateCandidatesBtn = document.getElementById("generate-candidates-btn");
+const reloadCandidatesBtn = document.getElementById("reload-candidates-btn");
+const importMessage = document.getElementById("import-message");
+const importMetadata = document.getElementById("import-metadata");
+const candidateSummary = document.getElementById("candidate-summary");
+const candidatesContainer = document.getElementById("candidates-container");
+
 let categoriesCache = [];
 let currentEvents = [];
 let editingEventId = null;
+let currentImport = {
+  sourceDocument: null,
+  importBatch: null,
+  candidates: [],
+};
 
 function dateStringFromParts({ year, month, day }) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -89,6 +104,29 @@ function setTimeInputFromDate(input, date) {
 function showFormMessage(message, type = "") {
   formMessage.textContent = message;
   formMessage.className = `message ${type}`.trim();
+}
+
+function showImportMessage(message, type = "") {
+  importMessage.textContent = message;
+  importMessage.className = `message ${type}`.trim();
+}
+
+function normalizeErrorDetail(detail) {
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item.msg || JSON.stringify(item)).join("; ");
+  }
+  if (detail && typeof detail === "object") {
+    return JSON.stringify(detail);
+  }
+  return detail;
+}
+
+async function responseJsonOrError(response, fallbackMessage) {
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(normalizeErrorDetail(body?.detail) || fallbackMessage);
+  }
+  return body;
 }
 
 function escapeHtml(value) {
@@ -172,6 +210,17 @@ function getCategoryColor(categoryId) {
 function getCategoryName(categoryId) {
   const category = categoriesCache.find((item) => item.id === categoryId);
   return category?.name || "No category";
+}
+
+function categoryOptions(selectedId) {
+  const selectedValue = selectedId == null ? "" : String(selectedId);
+  return [
+    `<option value=""${selectedValue === "" ? " selected" : ""}>No category</option>`,
+    ...categoriesCache.map((category) => {
+      const selected = String(category.id) === selectedValue ? " selected" : "";
+      return `<option value="${category.id}"${selected}>${escapeHtml(category.name)}</option>`;
+    }),
+  ].join("");
 }
 
 function syncEndDateWithStartDate() {
@@ -430,6 +479,357 @@ async function deleteEvent(eventId) {
   if (!response.ok) throw new Error("Failed to delete event.");
 }
 
+function updateImportButtons() {
+  const hasBatch = Boolean(currentImport.importBatch?.id);
+  extractRowsBtn.disabled = !hasBatch;
+  generateCandidatesBtn.disabled = !hasBatch;
+  reloadCandidatesBtn.disabled = !hasBatch;
+}
+
+function renderImportMetadata(extraText = "") {
+  const source = currentImport.sourceDocument;
+  const batch = currentImport.importBatch;
+  if (!source || !batch) {
+    importMetadata.innerHTML = "";
+    candidateSummary.textContent = "";
+    updateImportButtons();
+    return;
+  }
+
+  importMetadata.innerHTML = `
+    <dl class="metadata-grid">
+      <div>
+        <dt>File</dt>
+        <dd>${escapeHtml(source.original_filename)}</dd>
+      </div>
+      <div>
+        <dt>Source</dt>
+        <dd>#${source.id}</dd>
+      </div>
+      <div>
+        <dt>Batch</dt>
+        <dd>#${batch.id}</dd>
+      </div>
+      <div>
+        <dt>Stored</dt>
+        <dd>${escapeHtml(source.storage_path)}</dd>
+      </div>
+      <div>
+        <dt>Size</dt>
+        <dd>${source.size_bytes} bytes</dd>
+      </div>
+      <div>
+        <dt>Status</dt>
+        <dd>${escapeHtml(batch.status || "pending")}</dd>
+      </div>
+    </dl>
+  `;
+  candidateSummary.textContent = extraText;
+  updateImportButtons();
+}
+
+function replaceCandidate(updatedCandidate) {
+  currentImport.candidates = currentImport.candidates.map((candidate) =>
+    candidate.id === updatedCandidate.id ? updatedCandidate : candidate,
+  );
+}
+
+function syncImportBatchStatusFromCandidates() {
+  if (!currentImport.importBatch || !currentImport.candidates.length) return;
+  const pendingCount = currentImport.candidates.filter((candidate) => candidate.review_status === "pending").length;
+  currentImport.importBatch.status = pendingCount === 0 ? "completed" : "ready_for_review";
+}
+
+function formatCandidateWhen(candidate) {
+  if (candidate.all_day) {
+    return formatAllDayRange(candidate);
+  }
+  const timezoneName = candidate.timezone_name || DEFAULT_TIMEZONE;
+  return `${formatTimedDateTime(candidate.start_datetime, timezoneName)} to ${formatTimedDateTime(candidate.end_datetime, timezoneName)} (${escapeHtml(timezoneName)})`;
+}
+
+function candidateDateTimeFields(candidate) {
+  if (candidate.all_day) {
+    return {
+      startDate: candidate.start_date,
+      lastDay: addDays(candidate.end_date, -1),
+      startTime: "09:00",
+      endDate: candidate.start_date,
+      endTime: "10:00",
+      timezoneName: DEFAULT_TIMEZONE,
+    };
+  }
+
+  const timezoneName = candidate.timezone_name || DEFAULT_TIMEZONE;
+  const start = zonedDateTimeParts(candidate.start_datetime, timezoneName);
+  const end = zonedDateTimeParts(candidate.end_datetime, timezoneName);
+  return {
+    startDate: start.date,
+    lastDay: start.date,
+    startTime: start.time,
+    endDate: end.date,
+    endTime: end.time,
+    timezoneName,
+  };
+}
+
+function renderCandidateCard(candidate) {
+  const fields = candidateDateTimeFields(candidate);
+  const pending = candidate.review_status === "pending";
+  const disabled = pending ? "" : " disabled";
+  const timedHidden = candidate.all_day ? " hidden" : "";
+  const allDayHidden = candidate.all_day ? "" : " hidden";
+
+  return `
+    <article class="candidate-card" data-id="${candidate.id}">
+      <div class="candidate-toprow">
+        <div>
+          <h3>${escapeHtml(candidate.title)}</h3>
+          <p class="candidate-status status-${escapeHtml(candidate.review_status)}">${escapeHtml(candidate.review_status)}</p>
+        </div>
+        <p class="event-meta">Row #${candidate.source_row_index}</p>
+      </div>
+
+      <p class="event-meta"><strong>When:</strong> ${formatCandidateWhen(candidate)}</p>
+      <p class="event-meta"><strong>Category:</strong> ${escapeHtml(getCategoryName(candidate.category_id))}</p>
+      <p class="event-meta"><strong>Location:</strong> ${escapeHtml(candidate.location || "-")}</p>
+      <p class="event-meta"><strong>Description:</strong> ${escapeHtml(candidate.description || "-")}</p>
+
+      <div class="candidate-edit-grid">
+        <div class="field">
+          <label>Title</label>
+          <input type="text" class="candidate-title" value="${escapeHtml(candidate.title || "")}"${disabled} />
+        </div>
+
+        <div class="field">
+          <label>Category</label>
+          <select class="candidate-category"${disabled}>${categoryOptions(candidate.category_id)}</select>
+        </div>
+
+        <div class="field">
+          <label>Description</label>
+          <textarea class="candidate-description" rows="2"${disabled}>${escapeHtml(candidate.description || "")}</textarea>
+        </div>
+
+        <div class="field">
+          <label>Location</label>
+          <input type="text" class="candidate-location" value="${escapeHtml(candidate.location || "")}"${disabled} />
+        </div>
+      </div>
+
+      <div class="field checkbox-row">
+        <input type="checkbox" class="candidate-all-day" ${candidate.all_day ? "checked" : ""}${disabled} />
+        <label>All day</label>
+      </div>
+
+      <div class="candidate-time-grid">
+        <div class="field">
+          <label>Start Date</label>
+          <input type="date" class="candidate-start-date" value="${fields.startDate}"${disabled} />
+        </div>
+
+        <div class="field candidate-all-day-field"${allDayHidden}>
+          <label>Last Day</label>
+          <input type="date" class="candidate-last-day" value="${fields.lastDay}"${disabled} />
+        </div>
+
+        <div class="field candidate-timed-field"${timedHidden}>
+          <label>Start Time</label>
+          <input type="time" class="candidate-start-time" value="${fields.startTime}"${disabled} />
+        </div>
+
+        <div class="field candidate-timed-field"${timedHidden}>
+          <label>End Date</label>
+          <input type="date" class="candidate-end-date" value="${fields.endDate}"${disabled} />
+        </div>
+
+        <div class="field candidate-timed-field"${timedHidden}>
+          <label>End Time</label>
+          <input type="time" class="candidate-end-time" value="${fields.endTime}"${disabled} />
+        </div>
+
+        <div class="field candidate-timed-field"${timedHidden}>
+          <label>Timezone</label>
+          <input type="text" class="candidate-timezone" value="${escapeHtml(fields.timezoneName)}"${disabled} />
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button type="button" class="small save-candidate-btn"${disabled}>Save Changes</button>
+        <button type="button" class="small danger reject-candidate-btn"${disabled}>Reject</button>
+        <button type="button" class="small approve-candidate-btn"${disabled}>Approve to Event</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderCandidates() {
+  if (!currentImport.importBatch) {
+    candidatesContainer.innerHTML = '<p class="empty-state">No import batch loaded.</p>';
+    candidateSummary.textContent = "";
+    return;
+  }
+
+  if (!currentImport.candidates.length) {
+    candidatesContainer.innerHTML = '<p class="empty-state">No candidates found.</p>';
+    candidateSummary.textContent = "No candidates found for this batch.";
+    return;
+  }
+
+  const pendingCount = currentImport.candidates.filter((candidate) => candidate.review_status === "pending").length;
+  const approvedCount = currentImport.candidates.filter((candidate) => candidate.review_status === "approved").length;
+  const rejectedCount = currentImport.candidates.filter((candidate) => candidate.review_status === "rejected").length;
+  candidateSummary.textContent = `${currentImport.candidates.length} candidate(s): ${pendingCount} pending, ${approvedCount} approved, ${rejectedCount} rejected`;
+  candidatesContainer.innerHTML = currentImport.candidates.map(renderCandidateCard).join("");
+}
+
+function setCandidateShapeVisibility(card) {
+  const isAllDay = card.querySelector(".candidate-all-day").checked;
+  card.querySelectorAll(".candidate-timed-field").forEach((field) => {
+    field.hidden = isAllDay;
+  });
+  card.querySelectorAll(".candidate-all-day-field").forEach((field) => {
+    field.hidden = !isAllDay;
+  });
+}
+
+function buildCandidatePayload(card) {
+  const isAllDay = card.querySelector(".candidate-all-day").checked;
+  const title = card.querySelector(".candidate-title").value.trim();
+  if (!title) throw new Error("Candidate title is required.");
+
+  const common = {
+    title,
+    description: card.querySelector(".candidate-description").value.trim() || null,
+    location: card.querySelector(".candidate-location").value.trim() || null,
+    category_id: card.querySelector(".candidate-category").value ? Number(card.querySelector(".candidate-category").value) : null,
+    all_day: isAllDay,
+  };
+
+  const startDate = card.querySelector(".candidate-start-date").value;
+  if (!startDate) throw new Error("Start date is required.");
+
+  if (isAllDay) {
+    const lastDay = card.querySelector(".candidate-last-day").value;
+    if (!lastDay) throw new Error("Last day is required.");
+    if (lastDay < startDate) throw new Error("Last day cannot be before the start date.");
+    return {
+      ...common,
+      start_date: startDate,
+      end_date: addDays(lastDay, 1),
+      start_datetime: null,
+      end_datetime: null,
+      timezone_name: null,
+    };
+  }
+
+  const startTime = card.querySelector(".candidate-start-time").value;
+  const endDate = card.querySelector(".candidate-end-date").value;
+  const endTime = card.querySelector(".candidate-end-time").value;
+  const timezoneName = card.querySelector(".candidate-timezone").value.trim() || DEFAULT_TIMEZONE;
+  if (!startTime || !endDate || !endTime) {
+    throw new Error("Start and end date and time are required.");
+  }
+
+  return {
+    ...common,
+    start_datetime: `${startDate}T${startTime}:00`,
+    end_datetime: `${endDate}T${endTime}:00`,
+    start_date: null,
+    end_date: null,
+    timezone_name: timezoneName,
+  };
+}
+
+function setApprovedEventViewDate(eventData) {
+  if (eventData.all_day) {
+    selectedDateInput.value = eventData.start_date;
+    return;
+  }
+  const timezoneName = eventData.timezone_name || DEFAULT_TIMEZONE;
+  selectedDateInput.value = zonedDateTimeParts(eventData.start_datetime, timezoneName).date;
+}
+
+async function uploadExcelFile() {
+  const file = excelFileInput.files[0];
+  if (!file) throw new Error("Select an .xlsx file first.");
+  if (!file.name.toLowerCase().endsWith(".xlsx")) {
+    throw new Error("Only .xlsx files are supported.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(`${API_BASE}/imports/excel/upload`, {
+    method: "POST",
+    body: formData,
+  });
+  const body = await responseJsonOrError(response, "Failed to upload Excel file.");
+  currentImport = {
+    sourceDocument: body.source_document,
+    importBatch: body.import_batch,
+    candidates: [],
+  };
+  renderImportMetadata("Upload complete. Extract rows next.");
+  renderCandidates();
+}
+
+async function extractRowsForCurrentBatch() {
+  if (!currentImport.importBatch) throw new Error("Upload an Excel file first.");
+  const batchId = currentImport.importBatch.id;
+  const response = await fetch(`${API_BASE}/imports/excel/batches/${batchId}/extract-rows`, {
+    method: "POST",
+  });
+  const body = await responseJsonOrError(response, "Failed to extract rows.");
+  currentImport.importBatch.status = "processing";
+  currentImport.importBatch.total_rows_detected = body.rows_extracted;
+  renderImportMetadata(`Extracted ${body.rows_extracted} row(s) from ${body.worksheet_name}. Generate candidates next.`);
+}
+
+async function generateCandidatesForCurrentBatch() {
+  if (!currentImport.importBatch) throw new Error("Upload an Excel file first.");
+  const batchId = currentImport.importBatch.id;
+  const response = await fetch(`${API_BASE}/imports/excel/batches/${batchId}/generate-candidates`, {
+    method: "POST",
+  });
+  const body = await responseJsonOrError(response, "Failed to generate candidates.");
+  currentImport.importBatch.status = "ready_for_review";
+  currentImport.importBatch.total_candidate_events = body.candidates_created;
+  await loadCandidatesForCurrentBatch();
+  renderImportMetadata(`Generated ${body.candidates_created} candidate(s); ${body.rows_failed} row(s) failed.`);
+}
+
+async function loadCandidatesForCurrentBatch() {
+  if (!currentImport.importBatch) throw new Error("Upload an Excel file first.");
+  const batchId = currentImport.importBatch.id;
+  const response = await fetch(`${API_BASE}/imports/batches/${batchId}/candidates`);
+  const body = await responseJsonOrError(response, "Failed to load candidates.");
+  currentImport.candidates = body;
+  renderCandidates();
+}
+
+async function saveCandidate(candidateId, payload) {
+  const response = await fetch(`${API_BASE}/imports/candidates/${candidateId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return responseJsonOrError(response, "Failed to save candidate.");
+}
+
+async function rejectCandidate(candidateId) {
+  const response = await fetch(`${API_BASE}/imports/candidates/${candidateId}/reject`, {
+    method: "POST",
+  });
+  return responseJsonOrError(response, "Failed to reject candidate.");
+}
+
+async function approveCandidate(candidateId) {
+  const response = await fetch(`${API_BASE}/imports/candidates/${candidateId}/approve`, {
+    method: "POST",
+  });
+  return responseJsonOrError(response, "Failed to approve candidate.");
+}
+
 function renderLoadError(error) {
   eventsSummary.textContent = "";
   eventsContainer.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
@@ -500,6 +900,101 @@ eventsContainer.addEventListener("click", async (event) => {
   }
 });
 
+uploadExcelBtn.addEventListener("click", async () => {
+  showImportMessage("");
+  try {
+    await uploadExcelFile();
+    showImportMessage("Excel file uploaded.", "success");
+  } catch (error) {
+    showImportMessage(error.message, "error");
+  }
+});
+
+extractRowsBtn.addEventListener("click", async () => {
+  showImportMessage("");
+  try {
+    await extractRowsForCurrentBatch();
+    showImportMessage("Rows extracted.", "success");
+  } catch (error) {
+    showImportMessage(error.message, "error");
+  }
+});
+
+generateCandidatesBtn.addEventListener("click", async () => {
+  showImportMessage("");
+  try {
+    await generateCandidatesForCurrentBatch();
+    showImportMessage("Candidates generated.", "success");
+  } catch (error) {
+    showImportMessage(error.message, "error");
+  }
+});
+
+reloadCandidatesBtn.addEventListener("click", async () => {
+  showImportMessage("");
+  try {
+    await loadCandidatesForCurrentBatch();
+    showImportMessage(
+      currentImport.candidates.length ? "Candidates loaded." : "No candidates found.",
+      currentImport.candidates.length ? "success" : "error",
+    );
+  } catch (error) {
+    showImportMessage(error.message, "error");
+  }
+});
+
+candidatesContainer.addEventListener("change", (event) => {
+  const allDayToggle = event.target.closest(".candidate-all-day");
+  if (!allDayToggle) return;
+  const card = allDayToggle.closest(".candidate-card");
+  setCandidateShapeVisibility(card);
+});
+
+candidatesContainer.addEventListener("click", async (event) => {
+  const card = event.target.closest(".candidate-card");
+  if (!card) return;
+
+  const candidateId = Number(card.dataset.id);
+  const saveButton = event.target.closest(".save-candidate-btn");
+  const rejectButton = event.target.closest(".reject-candidate-btn");
+  const approveButton = event.target.closest(".approve-candidate-btn");
+
+  try {
+    if (saveButton) {
+      const payload = buildCandidatePayload(card);
+      const updatedCandidate = await saveCandidate(candidateId, payload);
+      replaceCandidate(updatedCandidate);
+      renderCandidates();
+      showImportMessage("Candidate saved.", "success");
+      return;
+    }
+
+    if (rejectButton) {
+      if (!window.confirm("Reject this candidate?")) return;
+      const updatedCandidate = await rejectCandidate(candidateId);
+      replaceCandidate(updatedCandidate);
+      syncImportBatchStatusFromCandidates();
+      renderImportMetadata();
+      renderCandidates();
+      showImportMessage("Candidate rejected.", "success");
+      return;
+    }
+
+    if (approveButton) {
+      const result = await approveCandidate(candidateId);
+      replaceCandidate(result.candidate);
+      syncImportBatchStatusFromCandidates();
+      renderImportMetadata();
+      setApprovedEventViewDate(result.event);
+      await loadCurrentView();
+      renderCandidates();
+      showImportMessage("Candidate approved and added as a real calendar event.", "success");
+    }
+  } catch (error) {
+    showImportMessage(error.message, "error");
+  }
+});
+
 eventForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   showFormMessage("");
@@ -524,6 +1019,7 @@ eventForm.addEventListener("submit", async (event) => {
 async function init() {
   selectedDateInput.value = "";
   setDefaultFormValues();
+  updateImportButtons();
 
   try {
     await fetchCategories();

@@ -13,94 +13,125 @@
       <p class="subtitle">Minimal frontend for manual scheduling</p>
     </header>
 
-    <main class="main-grid">
-      <section class="card">
-        <h2>Selected Day</h2>
+    <main class="main-stack">
+      <section class="section-block" aria-labelledby="manual-calendar-heading">
+        <h2 id="manual-calendar-heading">Manual Calendar</h2>
 
-        <div class="field">
-          <label for="selected-date">Date</label>
-          <input type="date" id="selected-date" />
-        </div>
+        <div class="main-grid">
+          <section class="card">
+            <h3>Selected Day</h3>
 
-        <div class="toolbar">
-          <button id="load-events-btn">Load Events</button>
-          <button id="today-btn" class="secondary">Today</button>
-        </div>
+            <div class="field">
+              <label for="selected-date">Date</label>
+              <input type="date" id="selected-date" />
+            </div>
 
-        <div id="events-summary" class="summary"></div>
+            <div class="toolbar">
+              <button id="load-events-btn">Load Events</button>
+              <button id="today-btn" class="secondary">Today</button>
+            </div>
 
-        <div id="events-container" class="events-container">
-          <p class="empty-state">No events loaded yet.</p>
+            <div id="events-summary" class="summary"></div>
+
+            <div id="events-container" class="events-container">
+              <p class="empty-state">No events loaded yet.</p>
+            </div>
+          </section>
+
+          <section class="card">
+            <h3>Add Event</h3>
+
+            <form id="event-form">
+              <div class="field">
+                <label for="title">Title</label>
+                <input type="text" id="title" required />
+              </div>
+
+              <div class="field">
+                <label for="description">Description</label>
+                <textarea id="description" rows="3"></textarea>
+              </div>
+
+              <div class="two-col">
+                <div class="field">
+                  <label for="start-date">Start Date</label>
+                  <input type="date" id="start-date" required />
+                </div>
+
+                <div class="field" id="start-time-field">
+                  <label for="start-time">Start Time</label>
+                  <input type="time" id="start-time" required />
+                </div>
+              </div>
+
+              <div class="two-col">
+                <div class="field" id="end-date-field">
+                  <label for="end-date">End Date</label>
+                  <input type="date" id="end-date" required />
+                </div>
+
+                <div class="field" id="end-time-field">
+                  <label for="end-time">End Time</label>
+                  <input type="time" id="end-time" required />
+                </div>
+
+                <div class="field" id="all-day-last-date-field" hidden>
+                  <label for="all-day-last-date">Last Day</label>
+                  <input type="date" id="all-day-last-date" />
+                </div>
+              </div>
+
+              <div class="field checkbox-row">
+                <input type="checkbox" id="all-day" />
+                <label for="all-day">All day</label>
+              </div>
+
+              <div class="field">
+                <label for="location">Location</label>
+                <input type="text" id="location" />
+              </div>
+
+              <div class="field">
+                <label for="category">Category</label>
+                <select id="category">
+                  <option value="">No category</option>
+                </select>
+              </div>
+
+              <div class="toolbar">
+                <button type="submit">Save Event</button>
+                <button type="button" id="clear-form-btn" class="secondary">Clear</button>
+              </div>
+            </form>
+
+            <div id="form-message" class="message"></div>
+          </section>
         </div>
       </section>
 
-      <section class="card">
-        <h2>Add Event</h2>
+      <section class="section-block" aria-labelledby="excel-import-heading">
+        <h2 id="excel-import-heading">Excel Import Review</h2>
 
-        <form id="event-form">
+        <section class="card import-card">
           <div class="field">
-            <label for="title">Title</label>
-            <input type="text" id="title" required />
-          </div>
-
-          <div class="field">
-            <label for="description">Description</label>
-            <textarea id="description" rows="3"></textarea>
-          </div>
-
-          <div class="two-col">
-            <div class="field">
-              <label for="start-date">Start Date</label>
-              <input type="date" id="start-date" required />
-            </div>
-
-            <div class="field" id="start-time-field">
-              <label for="start-time">Start Time</label>
-              <input type="time" id="start-time" required />
-            </div>
-          </div>
-
-          <div class="two-col">
-            <div class="field" id="end-date-field">
-              <label for="end-date">End Date</label>
-              <input type="date" id="end-date" required />
-            </div>
-
-            <div class="field" id="end-time-field">
-              <label for="end-time">End Time</label>
-              <input type="time" id="end-time" required />
-            </div>
-
-            <div class="field" id="all-day-last-date-field" hidden>
-              <label for="all-day-last-date">Last Day</label>
-              <input type="date" id="all-day-last-date" />
-            </div>
-          </div>
-
-          <div class="field checkbox-row">
-            <input type="checkbox" id="all-day" />
-            <label for="all-day">All day</label>
-          </div>
-
-          <div class="field">
-            <label for="location">Location</label>
-            <input type="text" id="location" />
-          </div>
-
-          <div class="field">
-            <label for="category">Category</label>
-            <select id="category">
-              <option value="">No category</option>
-            </select>
+            <label for="excel-file">Excel file</label>
+            <input type="file" id="excel-file" accept=".xlsx" />
           </div>
 
           <div class="toolbar">
-            <button type="submit">Save Event</button>
-            <button type="button" id="clear-form-btn" class="secondary">Clear</button>
+            <button type="button" id="upload-excel-btn">Upload</button>
+            <button type="button" id="extract-rows-btn" class="secondary" disabled>Extract Rows</button>
+            <button type="button" id="generate-candidates-btn" class="secondary" disabled>Generate Candidates</button>
+            <button type="button" id="reload-candidates-btn" class="secondary" disabled>Reload Candidates</button>
           </div>
-        </form>
 
-        <div id="form-message" class="message"></div>
+          <div id="import-message" class="message"></div>
+          <div id="import-metadata" class="import-metadata"></div>
+          <div id="candidate-summary" class="summary"></div>
+          <div id="candidates-container" class="candidate-list">
+            <p class="empty-state">No import batch loaded.</p>
+          </div>
+        </section>
       </section>
     </main>
   </div>
