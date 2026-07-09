@@ -8,7 +8,7 @@ Alembic migrations are authoritative. The current schema head is `20260623_0003`
 20260619_0001 -> 20260623_0002 -> 20260623_0003
 ```
 
-`20260623_0002` defines explicit event time semantics. `20260623_0003` adds the import-pipeline foundation tables. The application now has initial `.xlsx` upload storage, metadata creation, and raw-row extraction; candidate generation, review, and approval endpoints remain future work.
+`20260623_0002` defines explicit event time semantics. `20260623_0003` adds the import-pipeline foundation tables. The application now has initial `.xlsx` upload storage, metadata creation, raw-row extraction, and candidate generation; candidate review and approval endpoints remain future work.
 
 ## Shared time rules
 
@@ -71,6 +71,8 @@ Named checks require exactly one shape:
 ### Candidate events
 
 `candidate_events` is the reviewable interpretation of an import row. It references both its batch and raw row, uses the same timed/all-day shape and ordering checks as `events`, and has review statuses `pending`, `approved`, and `rejected`. It may reference a category with `ON DELETE SET NULL`.
+
+Excel candidate generation treats the first extracted row as headers, maps flexible header aliases, and creates pending candidates from subsequent valid rows. Timed candidates are normalized to UTC with the supplied timezone or `Europe/Amsterdam`; all-day candidates use inclusive source dates converted to exclusive internal `end_date` values. Matching category names are resolved case-insensitively; unknown categories leave `category_id` null. Invalid data rows are marked failed while valid rows can still produce candidates. A batch with generated candidates moves to `ready_for_review`.
 
 Import provenance is restrictive by default: source documents, batches, rows, and candidates do not silently cascade away. An approved event remains traceable through:
 

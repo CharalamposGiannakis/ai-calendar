@@ -6,6 +6,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.excel_candidates import (
+    CandidateGenerationError,
+    ImportRowInput,
+    generate_candidate_drafts,
+)
 from app.excel_import import ExcelExtractionError, extract_first_visible_worksheet_rows
 from app.import_storage import (
     UploadTooLargeError,
@@ -15,8 +20,14 @@ from app.import_storage import (
     remove_stored_upload,
     store_excel_upload,
 )
-from app.models import ImportBatch, ImportRow, SourceDocument
-from app.schemas import ExcelRowExtractionResponse, ExcelUploadResponse, ImportRowRead
+from app.models import CandidateEvent, Category, ImportBatch, ImportRow, SourceDocument
+from app.schemas import (
+    CandidateEventRead,
+    ExcelCandidateGenerationResponse,
+    ExcelRowExtractionResponse,
+    ExcelUploadResponse,
+    ImportRowRead,
+)
 
 router = APIRouter(prefix="/imports", tags=["imports"])
 
@@ -51,6 +62,45 @@ def _source_document_path(batch: ImportBatch, storage_dir: Path) -> Path:
         raise HTTPException(status_code=404, detail="Stored source document file not found.")
 
     return workbook_path
+
+
+def _candidate_payload(candidate: CandidateEvent) -> dict:
+    return {
+        "id": candidate.id,
+        "import_batch_id": candidate.import_batch_id,
+        "import_row_id": candidate.import_row_id,
+        "source_row_index": candidate.import_row.row_index,
+        "title": candidate.title,
+        "description": candidate.description,
+        "all_day": candidate.all_day,
+        "start_datetime": candidate.start_datetime,
+        "end_datetime": candidate.end_datetime,
+        "start_date": candidate.start_date,
+        "end_date": candidate.end_date,
+        "timezone_name": candidate.timezone_name,
+        "location": candidate.location,
+        "category_id": candidate.category_id,
+        "review_status": candidate.review_status,
+        "was_edited": candidate.was_edited,
+        "review_notes": candidate.review_notes,
+        "created_at": candidate.created_at,
+        "updated_at": candidate.updated_at,
+    }
+
+
+def _candidate_preview(candidate: CandidateEvent) -> dict:
+    return {
+        "import_row_id": candidate.import_row_id,
+        "source_row_index": candidate.import_row.row_index,
+        "title": candidate.title,
+        "all_day": candidate.all_day,
+        "start_datetime": candidate.start_datetime,
+        "end_datetime": candidate.end_datetime,
+        "start_date": candidate.start_date,
+        "end_date": candidate.end_date,
+        "timezone_name": candidate.timezone_name,
+        "category_id": candidate.category_id,
+    }
 
 
 @router.post(
@@ -180,3 +230,134 @@ def list_import_rows(batch_id: int, db: Session = Depends(get_db)):
         .order_by(ImportRow.row_index.asc(), ImportRow.id.asc())
         .all()
     )
+
+
+@router.post(
+    "/excel/batches/{batch_id}/generate-candidates",
+    response_model=ExcelCandidateGenerationResponse,
+)
+def generate_excel_candidates(batch_id: int, db: Session = Depends(get_db)):
+    batch = _get_batch_or_404(batch_id, db)
+
+    existing_candidate = (
+        db.query(CandidateEvent.id)
+        .filter(CandidateEvent.import_batch_id == batch.id)
+        .first()
+    )
+    if existing_candidate is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Candidate events have already been generated for this import batch.",
+        )
+
+    import_rows = (
+        db.query(ImportRow)
+        .filter(ImportRow.import_batch_id == batch.id)
+        .order_by(ImportRow.row_index.asc(), ImportRow.id.asc())
+        .all()
+    )
+    if not import_rows:
+        raise HTTPException(
+            status_code=400,
+            detail="Import batch has no extracted rows.",
+        )
+
+    categories_by_name = {
+        category.name.casefold(): category.id for category in db.query(Category).all()
+    }
+    try:
+        result = generate_candidate_drafts(
+            [
+                ImportRowInput(
+                    id=row.id,
+                    row_index=row.row_index,
+                    raw_data_json=row.raw_data_json,
+                    raw_text=row.raw_text,
+                )
+                for row in import_rows
+            ],
+            categories_by_name,
+        )
+    except CandidateGenerationError as error:
+        batch.status = "failed"
+        batch.error_message = str(error)
+        db.commit()
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    rows_by_id = {row.id: row for row in import_rows}
+    for issue in result.row_issues:
+        row = rows_by_id[issue.import_row_id]
+        row.parse_status = issue.status
+        row.error_message = issue.message
+
+    candidates = [
+        CandidateEvent(
+            import_batch_id=batch.id,
+            import_row_id=draft.import_row_id,
+            title=draft.title,
+            description=draft.description,
+            all_day=draft.all_day,
+            start_datetime=draft.start_datetime,
+            end_datetime=draft.end_datetime,
+            start_date=draft.start_date,
+            end_date=draft.end_date,
+            timezone_name=draft.timezone_name,
+            location=draft.location,
+            category_id=draft.category_id,
+            review_status="pending",
+        )
+        for draft in result.candidates
+    ]
+    db.add_all(candidates)
+
+    batch.total_candidate_events = len(candidates)
+    if candidates:
+        batch.status = "ready_for_review"
+        batch.error_message = None
+    else:
+        batch.status = "failed"
+        batch.error_message = "No candidate events could be generated from extracted rows."
+
+    try:
+        db.commit()
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Candidate events could not be recorded.",
+        ) from error
+
+    if not candidates:
+        raise HTTPException(status_code=400, detail=batch.error_message)
+
+    for candidate in candidates:
+        db.refresh(candidate)
+
+    skipped_count = sum(
+        1
+        for issue in result.row_issues
+        if issue.status == "skipped" and issue.import_row_id != result.header_row_id
+    )
+    failed_count = sum(1 for issue in result.row_issues if issue.status == "failed")
+
+    return {
+        "batch_id": batch.id,
+        "rows_inspected": result.rows_inspected,
+        "candidates_created": len(candidates),
+        "rows_skipped": skipped_count,
+        "rows_failed": failed_count,
+        "candidate_preview": [_candidate_preview(candidate) for candidate in candidates[:5]],
+    }
+
+
+@router.get("/batches/{batch_id}/candidates", response_model=list[CandidateEventRead])
+def list_import_candidates(batch_id: int, db: Session = Depends(get_db)):
+    _get_batch_or_404(batch_id, db)
+    candidates = (
+        db.query(CandidateEvent)
+        .join(ImportRow, CandidateEvent.import_row_id == ImportRow.id)
+        .filter(CandidateEvent.import_batch_id == batch_id)
+        .order_by(ImportRow.row_index.asc(), CandidateEvent.id.asc())
+        .all()
+    )
+    return [_candidate_payload(candidate) for candidate in candidates]
