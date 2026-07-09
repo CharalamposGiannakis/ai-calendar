@@ -1,7 +1,7 @@
 # AI Calendar - Current Project Status
 
 **Last updated:** 9 July 2026
-**Current phase:** Manual-calendar vertical slice with Excel candidate generation
+**Current phase:** Manual-calendar vertical slice with backend Excel candidate review
 
 ## Implemented
 
@@ -28,6 +28,8 @@
 * compact JSON preservation of non-empty Excel rows with source worksheet/row locators
 * deterministic Excel candidate generation from extracted rows using header aliases
 * pending `candidate_events` creation with row-level provenance and category-name matching
+* backend candidate fetch, edit, reject, and transactional approval endpoints
+* approved import candidates create real `events` with `source_type = import`
 * seeded Uni, Work, and Other categories
 
 ### Frontend and runtime
@@ -39,20 +41,20 @@
 
 ## Verification completed
 
-* 56 isolated integration tests pass, covering API time semantics, DST behavior, upload storage, Excel raw-row extraction, Excel candidate generation, import metadata creation, migration conversion, constraints, and import-schema downgrade
+* 70 isolated integration tests pass, covering API time semantics, DST behavior, upload storage, Excel raw-row extraction, Excel candidate generation, candidate review/approval, import metadata creation, migration conversion, constraints, and import-schema downgrade
 * Alembic upgrade, check, and downgrade pass on temporary SQLite databases
 * a disposable copy of the development database upgraded to `20260623_0003` with 5 retained events: 3 all-day, 2 timed, and 5 valid time shapes
 * Python compilation and frontend single-source checks pass
 
 ## Current limitations
 
-* Excel upload storage, raw-row extraction, and candidate generation exist
+* Excel upload storage, raw-row extraction, candidate generation, and backend candidate review exist
 * no PDF parsing
-* no candidate review or approval endpoints
-* generated candidates cannot yet be edited, rejected, or approved into real `events`
+* no frontend import-review UI
+* no duplicate or conflict warnings
 * no timezone selector or user settings table
 * day, week, and month calendar views are not implemented
 
 ## Immediate next task
 
-Add candidate review controls and transactional approval into real `events`, while preserving the existing review-first import boundary.
+Add a minimal frontend import-review UI for listing, editing, rejecting, and approving generated candidates from a phone or laptop.

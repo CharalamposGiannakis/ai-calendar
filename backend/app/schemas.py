@@ -118,6 +118,50 @@ class CandidateEventRead(BaseModel):
         return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
+class CandidateEventUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    all_day: bool | None = None
+    start_datetime: datetime | None = None
+    end_datetime: datetime | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    timezone_name: str | None = None
+    location: str | None = None
+    category_id: int | None = None
+    review_notes: str | None = None
+
+
+class ApprovedEventRead(BaseModel):
+    id: int
+    title: str
+    description: str | None = None
+    all_day: bool
+    start_datetime: datetime | None = None
+    end_datetime: datetime | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    timezone_name: str | None = None
+    location: str | None = None
+    category_id: int | None = None
+    source_type: str
+    status: str
+    candidate_event_id: int | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("start_datetime", "end_datetime", when_used="json")
+    def serialize_utc_datetime(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+        return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+class CandidateApprovalResponse(BaseModel):
+    candidate: CandidateEventRead
+    event: ApprovedEventRead
+
+
 class CandidatePreview(BaseModel):
     import_row_id: int
     source_row_index: int

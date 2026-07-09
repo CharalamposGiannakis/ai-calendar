@@ -20,13 +20,16 @@ from app.import_storage import (
     remove_stored_upload,
     store_excel_upload,
 )
-from app.models import CandidateEvent, Category, ImportBatch, ImportRow, SourceDocument
+from app.models import CandidateEvent, Category, Event, ImportBatch, ImportRow, SourceDocument
 from app.schemas import (
+    CandidateApprovalResponse,
     CandidateEventRead,
+    CandidateEventUpdate,
     ExcelCandidateGenerationResponse,
     ExcelRowExtractionResponse,
     ExcelUploadResponse,
     ImportRowRead,
+    normalize_event_shape,
 )
 
 router = APIRouter(prefix="/imports", tags=["imports"])
@@ -43,6 +46,33 @@ def _get_batch_or_404(batch_id: int, db: Session) -> ImportBatch:
     if batch.source_document is None:
         raise HTTPException(status_code=404, detail="Source document not found.")
     return batch
+
+
+def _get_candidate_or_404(candidate_id: int, db: Session) -> CandidateEvent:
+    candidate = (
+        db.query(CandidateEvent)
+        .filter(CandidateEvent.id == candidate_id)
+        .first()
+    )
+    if candidate is None:
+        raise HTTPException(status_code=404, detail="Candidate event not found.")
+    return candidate
+
+
+def _require_pending_candidate(candidate: CandidateEvent) -> None:
+    if candidate.review_status != "pending":
+        raise HTTPException(
+            status_code=409,
+            detail="Only pending candidate events can be changed.",
+        )
+
+
+def _validate_category_id(category_id: int | None, db: Session) -> None:
+    if category_id is None:
+        return
+    category = db.query(Category).filter(Category.id == category_id).first()
+    if category is None:
+        raise HTTPException(status_code=400, detail="category_id does not exist.")
 
 
 def _source_document_path(batch: ImportBatch, storage_dir: Path) -> Path:
@@ -101,6 +131,96 @@ def _candidate_preview(candidate: CandidateEvent) -> dict:
         "timezone_name": candidate.timezone_name,
         "category_id": candidate.category_id,
     }
+
+
+def _candidate_shape_payload(candidate: CandidateEvent) -> dict:
+    return {
+        "title": candidate.title,
+        "description": candidate.description,
+        "all_day": candidate.all_day,
+        "start_datetime": candidate.start_datetime,
+        "end_datetime": candidate.end_datetime,
+        "start_date": candidate.start_date,
+        "end_date": candidate.end_date,
+        "timezone_name": candidate.timezone_name,
+        "location": candidate.location,
+        "category_id": candidate.category_id,
+    }
+
+
+def _merge_candidate_update(candidate: CandidateEvent, data: dict) -> tuple[dict, str | None]:
+    shape_data = {key: value for key, value in data.items() if key != "review_notes"}
+    review_notes = data.get("review_notes", candidate.review_notes)
+
+    if "title" in shape_data:
+        if shape_data["title"] is None or str(shape_data["title"]).strip() == "":
+            raise HTTPException(status_code=422, detail="title is required.")
+        shape_data["title"] = str(shape_data["title"]).strip()
+
+    merged = _candidate_shape_payload(candidate)
+    if "all_day" in shape_data and shape_data["all_day"] != candidate.all_day:
+        if shape_data["all_day"]:
+            merged.update(
+                {
+                    "start_datetime": None,
+                    "end_datetime": None,
+                    "timezone_name": None,
+                }
+            )
+        else:
+            merged.update({"start_date": None, "end_date": None})
+
+    merged.update(shape_data)
+    try:
+        normalized = normalize_event_shape(merged)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+    return normalized, review_notes
+
+
+def _apply_candidate_values(
+    candidate: CandidateEvent,
+    normalized: dict,
+    review_notes: str | None,
+) -> None:
+    for field_name in (
+        "title",
+        "description",
+        "all_day",
+        "start_datetime",
+        "end_datetime",
+        "start_date",
+        "end_date",
+        "timezone_name",
+        "location",
+        "category_id",
+    ):
+        setattr(candidate, field_name, normalized[field_name])
+    candidate.review_notes = review_notes
+    candidate.was_edited = True
+
+
+def _update_batch_after_terminal_candidate(candidate: CandidateEvent, db: Session) -> None:
+    batch = candidate.import_batch
+    with db.no_autoflush:
+        pending_other_count = (
+            db.query(CandidateEvent.id)
+            .filter(
+                CandidateEvent.import_batch_id == candidate.import_batch_id,
+                CandidateEvent.id != candidate.id,
+                CandidateEvent.review_status == "pending",
+            )
+            .count()
+        )
+        total_candidate_count = (
+            db.query(CandidateEvent.id)
+            .filter(CandidateEvent.import_batch_id == candidate.import_batch_id)
+            .count()
+        )
+    batch.total_candidate_events = total_candidate_count
+    batch.status = "completed" if pending_other_count == 0 else "ready_for_review"
+    batch.error_message = None
 
 
 @router.post(
@@ -361,3 +481,98 @@ def list_import_candidates(batch_id: int, db: Session = Depends(get_db)):
         .all()
     )
     return [_candidate_payload(candidate) for candidate in candidates]
+
+
+@router.get("/candidates/{candidate_id}", response_model=CandidateEventRead)
+def get_import_candidate(candidate_id: int, db: Session = Depends(get_db)):
+    candidate = _get_candidate_or_404(candidate_id, db)
+    return _candidate_payload(candidate)
+
+
+@router.patch("/candidates/{candidate_id}", response_model=CandidateEventRead)
+def update_import_candidate(
+    candidate_id: int,
+    payload: CandidateEventUpdate,
+    db: Session = Depends(get_db),
+):
+    candidate = _get_candidate_or_404(candidate_id, db)
+    _require_pending_candidate(candidate)
+
+    data = payload.model_dump(exclude_unset=True)
+    normalized, review_notes = _merge_candidate_update(candidate, data)
+    _validate_category_id(normalized["category_id"], db)
+    _apply_candidate_values(candidate, normalized, review_notes)
+
+    try:
+        db.commit()
+        db.refresh(candidate)
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Candidate event could not be updated.",
+        ) from error
+
+    return _candidate_payload(candidate)
+
+
+@router.post("/candidates/{candidate_id}/reject", response_model=CandidateEventRead)
+def reject_import_candidate(candidate_id: int, db: Session = Depends(get_db)):
+    candidate = _get_candidate_or_404(candidate_id, db)
+    _require_pending_candidate(candidate)
+
+    candidate.review_status = "rejected"
+    _update_batch_after_terminal_candidate(candidate, db)
+
+    try:
+        db.commit()
+        db.refresh(candidate)
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Candidate event could not be rejected.",
+        ) from error
+
+    return _candidate_payload(candidate)
+
+
+@router.post(
+    "/candidates/{candidate_id}/approve",
+    response_model=CandidateApprovalResponse,
+)
+def approve_import_candidate(candidate_id: int, db: Session = Depends(get_db)):
+    candidate = _get_candidate_or_404(candidate_id, db)
+    _require_pending_candidate(candidate)
+
+    event = Event(
+        title=candidate.title,
+        description=candidate.description,
+        all_day=candidate.all_day,
+        start_datetime=candidate.start_datetime,
+        end_datetime=candidate.end_datetime,
+        start_date=candidate.start_date,
+        end_date=candidate.end_date,
+        timezone_name=candidate.timezone_name,
+        location=candidate.location,
+        category_id=candidate.category_id,
+        candidate_event_id=candidate.id,
+        source_type="import",
+        status="active",
+    )
+    db.add(event)
+    candidate.review_status = "approved"
+    _update_batch_after_terminal_candidate(candidate, db)
+
+    try:
+        db.commit()
+        db.refresh(candidate)
+        db.refresh(event)
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Candidate event could not be approved into an event.",
+        ) from error
+
+    return {"candidate": _candidate_payload(candidate), "event": event}
