@@ -1,6 +1,10 @@
 # AI Calendar
 
-AI Calendar is a standalone personal calendar for laptop and phone. It keeps manual scheduling in a local relational database today, then grows toward a review-first pipeline for turning structured Excel and PDF schedules into calendar events.
+AI Calendar is a standalone personal calendar and schedule-import project for laptop and phone. The current implementation focuses on reliable manual scheduling, local relational storage, and a review-first Excel import workflow that turns spreadsheet rows into candidate events before they become real calendar entries.
+
+The project is called AI Calendar because the long-term product direction is an AI-assisted calendar: a dependable calendar foundation with a future natural-language and agent layer for interpreting schedules, suggesting changes, and helping with planning. That AI/NLP layer is not implemented yet. Today, the application uses deterministic backend logic rather than an AI agent or LLM parser.
+
+As a public portfolio project, the emphasis is on building the careful foundation an AI calendar would need: explicit time semantics, traceable imports, human approval, conflict awareness, and a clean local web interface.
 
 ## Current capabilities
 
@@ -26,6 +30,10 @@ The current interface is a selected-day and upcoming-events view. A full day, we
 ## Planned MVP
 
 * PDF table import
+
+## Future AI Direction
+
+Planned AI/NLP capabilities include natural-language event creation, conversational schedule review, agent-assisted import cleanup, semantic duplicate detection, conflict-aware suggestions, and optional voice interaction. These features are intended to build on the existing review-first pipeline rather than bypassing it: imported or inferred events should remain inspectable and user-approved before they affect the calendar.
 
 ## Technology
 
@@ -83,7 +91,7 @@ The tests create temporary SQLite databases and do not use the local development
 
 ## Roadmap
 
-The next engineering work is PDF table import on the existing review-first pipeline. Later AI-assisted features follow from that foundation.
+The next engineering work is PDF table import on the existing review-first pipeline. AI/NLP agent features come later, after the calendar and import foundation is dependable enough to support them.
 
 ## Documentation
 

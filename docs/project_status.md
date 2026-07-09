@@ -1,6 +1,6 @@
 # AI Calendar - Current Project Status
 
-**Last updated:** 9 July 2026
+**Last updated:** 10 July 2026
 **Current phase:** Manual-calendar vertical slice with frontend import warning display
 
 ## Implemented
@@ -52,6 +52,7 @@
 ## Current limitations
 
 * no PDF parsing
+* no AI/NLP agent, LLM parsing, or conversational scheduling assistant yet
 * no timezone selector or user settings table
 * day, week, and month calendar views are not implemented
 
