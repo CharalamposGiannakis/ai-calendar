@@ -1,18 +1,24 @@
-# AI Calendar - Codex Instructions
+# AI Calendar - Contributor and Agent Instructions
 
-## Project ownership
+## Project Principles
 
-ChatGPT is used for product decisions, architecture, implementation design, and writing new scripts.
+AI Calendar is a standalone personal calendar with a review-first import pipeline. Keep the implementation dependable, local-first, and explicit about what is implemented today versus planned for later.
 
-Codex is primarily used for implementation assistance, repository inspection, testing, repetitive work, and debugging.
+When working in this repository:
 
-Do not introduce major product, architecture, database-schema, or dependency changes unless the task explicitly requests them.
+* prefer the smallest change that correctly completes the task;
+* preserve the standalone architecture;
+* keep the relational database as the application source of truth;
+* keep imported records reviewable before they become calendar events;
+* avoid product, architecture, schema, or dependency changes unless the task calls for them;
+* use synthetic data in tests and examples;
+* never add real personal documents, runtime uploads, or local databases to the repository.
 
-## Documentation authority
+## Documentation Authority
 
-The Git repository is the canonical source for shared project documents. ChatGPT Project Sources hold exact synchronized mirrors of those canonical files.
+The repository is the canonical source for project documentation. When documentation and implementation disagree, inspect the implementation and migrations first, then update the affected document as part of the same task.
 
-When information conflicts, use this authority order:
+Use this authority order when resolving conflicts:
 
 1. Current implementation and Alembic migrations
 2. `docs/decision_log.md`
@@ -22,11 +28,9 @@ When information conflicts, use this authority order:
 6. `docs/project_overview.md`
 7. `README.md`
 
-Inspect the implementation when documentation conflicts with it. Correct the affected document in the same task; do not silently follow stale documentation. Do not edit unrelated documents merely to refresh dates.
+Update `docs/decision_log.md` only for genuine product or architecture decisions.
 
-`Practical-Instructions.txt` is private to ChatGPT Project Sources. It must never be added to, cited by, or exported from this repository.
-
-## Required context
+## Required Context Before Editing
 
 Before modifying the repository:
 
@@ -34,25 +38,15 @@ Before modifying the repository:
 2. Read `docs/mvp_v1_blueprint.md` when the task affects scope or product behavior.
 3. Read `docs/schema_v1.md` when the task affects persistence or imports.
 4. Run `git status`.
-5. Inspect the relevant existing implementation before proposing changes.
-
-## Implementation principles
-
-* Prefer the smallest change that correctly completes the task.
-* Preserve the standalone architecture.
-* Keep the relational database as the application source of truth.
-* Keep imported records reviewable before they become calendar events.
-* Keep the project expandable without prematurely adding unnecessary complexity.
-* Do not modify or commit real personal documents or runtime databases.
-* Use synthetic fixtures for tests.
-* Do not add production dependencies unless they are necessary and explicitly explained.
-* Update affected documentation during the same task.
+5. Inspect the relevant existing implementation before proposing or making changes.
 
 ## Frontend
 
-`frontend/` is the single editable source of truth for frontend files. FastAPI serves those files directly; do not add or maintain a second manually edited frontend copy.
+`frontend/` is the single editable frontend source. FastAPI serves these files directly. Do not create or maintain a second manually edited frontend copy under `backend/app/static`.
 
-## Verification
+After changing frontend behavior, verify the affected interaction manually when practical.
+
+## Backend and Tests
 
 After changing Python code, run the relevant tests and at minimum:
 
@@ -60,29 +54,30 @@ After changing Python code, run the relevant tests and at minimum:
 python -m compileall backend\app
 ```
 
-After changing frontend behavior, start the application and verify the affected interaction manually.
+Prefer the isolated integration tests for API behavior:
 
-## Documentation synchronization
+```powershell
+python -m pytest tests\integration
+```
 
-After completing a meaningful task:
+Tests should use temporary SQLite databases and synthetic files. They must not depend on the development database or real runtime uploads.
 
-* update `docs/project_status.md`
-* update `docs/decision_log.md` only when an important decision was made
-* include verification results and any unresolved issue
-* keep `project_status.md` concise and current rather than using it as a detailed changelog
-* refresh the Project Sources export when shared documentation changes
+## Documentation Updates
 
-## Git safety
+After a meaningful implementation or repository-hygiene task:
 
-Do not commit or push unless the task explicitly requests it.
+* update `docs/project_status.md` when current status changes;
+* update README or other docs when public usage, setup, architecture, or scope changes;
+* keep status notes concise rather than using them as a detailed changelog;
+* avoid refreshing dates or rewriting unrelated sections.
 
-Before handing work back, report:
+## Git Safety
 
-* files changed
-* behavior implemented or fixed
-* checks performed
-* unresolved issues
-* recommended next action
-* whether the work is ready to commit
-* one suggested conventional commit message
-* which ChatGPT Project Source files need replacement
+Do not commit or push unless explicitly asked. Before handing work back, report:
+
+* files changed;
+* behavior or documentation updated;
+* checks performed;
+* unresolved issues;
+* whether the work is ready to commit;
+* a suggested conventional commit message.

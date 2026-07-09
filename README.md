@@ -1,5 +1,7 @@
 # AI Calendar
 
+[![CI](https://github.com/CharalamposGiannakis/ai-calendar/actions/workflows/ci.yml/badge.svg)](https://github.com/CharalamposGiannakis/ai-calendar/actions/workflows/ci.yml)
+
 AI Calendar is a standalone personal calendar and schedule-import project for laptop and phone. The current implementation focuses on reliable manual scheduling, local relational storage, and a review-first Excel import workflow that turns spreadsheet rows into candidate events before they become real calendar entries.
 
 The project is called AI Calendar because the long-term product direction is an AI-assisted calendar: a dependable calendar foundation with a future natural-language and agent layer for interpreting schedules, suggesting changes, and helping with planning. That AI/NLP layer is not implemented yet. Today, the application uses deterministic backend logic rather than an AI agent or LLM parser.
@@ -23,9 +25,17 @@ As a public portfolio project, the emphasis is on building the careful foundatio
 * Minimal frontend Excel import-review workflow from upload through approval, including candidate warning display
 * Responsive, same-origin web interface for creating, editing, deleting, and viewing events
 * One-server startup that works locally and on a phone connected to the same network
+* GitHub Actions CI for integration tests and backend compilation
 * Isolated pytest coverage for API time semantics and migration workflows
 
 The current interface is a selected-day and upcoming-events view. A full day, week, and month calendar view is still planned.
+
+## Screenshots
+
+Screenshots are planned under [docs/screenshots](docs/screenshots/). Only synthetic calendar data should be used. Suggested future files:
+
+* `manual-calendar-view.png`
+* `excel-import-review-warnings.png`
 
 ## Planned MVP
 
@@ -50,6 +60,7 @@ backend/app/              FastAPI application, models, routers, and seed data
 backend/alembic/          Versioned database migrations
 scripts/                  Startup, database adoption, verification, and export scripts
 tests/integration/        Isolated API and migration tests
+.github/workflows/        Continuous integration workflow
 docs/                     Product, schema, status, and decision documentation
 ```
 
@@ -95,9 +106,14 @@ The next engineering work is PDF table import on the existing review-first pipel
 
 ## Documentation
 
+* [Architecture](docs/architecture.md)
 * [Project overview](docs/project_overview.md)
 * [MVP blueprint](docs/mvp_v1_blueprint.md)
 * [Current project status](docs/project_status.md)
 * [Decision log](docs/decision_log.md)
 * [Schema reference](docs/schema_v1.md)
 * [Contributor instructions](AGENTS.md)
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

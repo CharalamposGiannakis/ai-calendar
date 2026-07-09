@@ -42,6 +42,12 @@
 * frontend duplicate and conflict warning display on import candidate cards
 * `scripts/run_app.ps1` migrates the configured database before Uvicorn starts
 
+### Repository hygiene
+
+* GitHub Actions CI workflow runs integration tests and backend compilation
+* MIT License added for public reuse
+* public architecture note and screenshot placeholder documented
+
 ## Verification completed
 
 * 81 isolated integration tests pass, covering API time semantics, DST behavior, upload storage, Excel raw-row extraction, Excel candidate generation, candidate review/approval, import candidate warnings, import metadata creation, migration conversion, constraints, and import-schema downgrade
