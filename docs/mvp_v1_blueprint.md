@@ -16,7 +16,7 @@ AI Calendar is a standalone personal calendar for laptop and phone. It combines 
 
 The implemented foundation includes categories, manual event CRUD, explicit Amsterdam/UTC time handling, date-only all-day events, DST validation, half-open filtering, and a responsive selected-day or upcoming-events interface.
 
-The database now includes the import foundation: source documents, import batches, raw import rows, candidate events, and event-to-candidate provenance. The application can safely store uploaded `.xlsx` files, create source-document and pending import-batch metadata, extract non-empty Excel rows into `import_rows`, generate pending reviewable `candidate_events`, compute backend duplicate/conflict warnings, and let the user edit, reject, or approve candidates into real events from a minimal browser UI.
+The database now includes the import foundation: source documents, import batches, raw import rows, candidate events, and event-to-candidate provenance. The application can safely store uploaded `.xlsx` files, create source-document and pending import-batch metadata, extract non-empty Excel rows into `import_rows`, generate pending reviewable `candidate_events`, compute and display duplicate/conflict warnings, and let the user edit, reject, or approve candidates into real events from a minimal browser UI.
 
 ## MVP target
 
@@ -53,6 +53,5 @@ source document -> import batch -> raw row -> candidate event -> review -> calen
 
 ## Near-term implementation order
 
-1. Surface duplicate and conflict warnings in the frontend import-review UI.
-2. Add PDF table import.
-3. Add fuller day, week, and month calendar views.
+1. Add PDF table import.
+2. Add fuller day, week, and month calendar views.

@@ -1,7 +1,7 @@
 # AI Calendar - Current Project Status
 
 **Last updated:** 9 July 2026
-**Current phase:** Manual-calendar vertical slice with backend import warning support
+**Current phase:** Manual-calendar vertical slice with frontend import warning display
 
 ## Implemented
 
@@ -39,6 +39,7 @@
 * one FastAPI server serves frontend and API for laptop and phone use
 * timed event forms use Amsterdam local inputs; all-day forms use an inclusive Last Day field
 * minimal Excel import-review UI for upload, row extraction, candidate generation, candidate editing, rejection, and approval
+* frontend duplicate and conflict warning display on import candidate cards
 * `scripts/run_app.ps1` migrates the configured database before Uvicorn starts
 
 ## Verification completed
@@ -51,10 +52,9 @@
 ## Current limitations
 
 * no PDF parsing
-* no frontend display for duplicate or conflict warnings
 * no timezone selector or user settings table
 * day, week, and month calendar views are not implemented
 
 ## Immediate next task
 
-Surface duplicate and conflict warnings in the frontend import-review UI.
+Add PDF table import on the existing review-first import pipeline.

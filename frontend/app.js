@@ -548,6 +548,64 @@ function formatCandidateWhen(candidate) {
   return `${formatTimedDateTime(candidate.start_datetime, timezoneName)} to ${formatTimedDateTime(candidate.end_datetime, timezoneName)} (${escapeHtml(timezoneName)})`;
 }
 
+function isDateOnlyValue(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+}
+
+function formatWarningEventWhen(warning) {
+  const start = warning.event_start;
+  const end = warning.event_end;
+  if (!start || !end) return "";
+
+  if (isDateOnlyValue(start) && isDateOnlyValue(end)) {
+    const lastDay = addDays(end, -1);
+    if (start === lastDay) {
+      return formatDateOnly(start);
+    }
+    return `${formatDateOnly(start)} to ${formatDateOnly(lastDay)}`;
+  }
+
+  if (!isDateOnlyValue(start) && !isDateOnlyValue(end)) {
+    return `${formatTimedDateTime(start, DEFAULT_TIMEZONE)} to ${formatTimedDateTime(end, DEFAULT_TIMEZONE)}`;
+  }
+
+  return `${start} to ${end}`;
+}
+
+function warningHeading(warning) {
+  if (warning.type === "duplicate") return "Possible duplicate of";
+  if (warning.type === "conflict") return "Conflict with";
+  return "Warning for";
+}
+
+function renderCandidateWarnings(candidate) {
+  const warnings = candidate.warnings || [];
+  if (!warnings.length) return "";
+
+  return `
+    <div class="candidate-warnings" aria-label="Candidate warnings">
+      ${warnings
+        .map((warning) => {
+          const warningType = warning.type === "duplicate" ? "duplicate" : "conflict";
+          const eventTitle = warning.event_title || `Event #${warning.event_id}`;
+          const when = formatWarningEventWhen(warning);
+
+          return `
+            <div class="candidate-warning warning-${warningType}">
+              <div class="warning-toprow">
+                <span class="warning-badge">${escapeHtml(warningType)}</span>
+                <strong>${escapeHtml(warningHeading(warning))}: ${escapeHtml(eventTitle)}</strong>
+              </div>
+              ${when ? `<p>${escapeHtml(when)}</p>` : ""}
+              ${warning.message ? `<p>${escapeHtml(warning.message)}</p>` : ""}
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function candidateDateTimeFields(candidate) {
   if (candidate.all_day) {
     return {
@@ -589,6 +647,8 @@ function renderCandidateCard(candidate) {
         </div>
         <p class="event-meta">Row #${candidate.source_row_index}</p>
       </div>
+
+      ${renderCandidateWarnings(candidate)}
 
       <p class="event-meta"><strong>When:</strong> ${formatCandidateWhen(candidate)}</p>
       <p class="event-meta"><strong>Category:</strong> ${escapeHtml(getCategoryName(candidate.category_id))}</p>
@@ -807,6 +867,11 @@ async function loadCandidatesForCurrentBatch() {
   renderCandidates();
 }
 
+async function fetchCandidate(candidateId) {
+  const response = await fetch(`${API_BASE}/imports/candidates/${candidateId}`);
+  return responseJsonOrError(response, "Failed to refresh candidate warnings.");
+}
+
 async function saveCandidate(candidateId, payload) {
   const response = await fetch(`${API_BASE}/imports/candidates/${candidateId}`, {
     method: "PATCH",
@@ -962,7 +1027,8 @@ candidatesContainer.addEventListener("click", async (event) => {
   try {
     if (saveButton) {
       const payload = buildCandidatePayload(card);
-      const updatedCandidate = await saveCandidate(candidateId, payload);
+      await saveCandidate(candidateId, payload);
+      const updatedCandidate = await fetchCandidate(candidateId);
       replaceCandidate(updatedCandidate);
       renderCandidates();
       showImportMessage("Candidate saved.", "success");
@@ -971,7 +1037,8 @@ candidatesContainer.addEventListener("click", async (event) => {
 
     if (rejectButton) {
       if (!window.confirm("Reject this candidate?")) return;
-      const updatedCandidate = await rejectCandidate(candidateId);
+      await rejectCandidate(candidateId);
+      const updatedCandidate = await fetchCandidate(candidateId);
       replaceCandidate(updatedCandidate);
       syncImportBatchStatusFromCandidates();
       renderImportMetadata();
@@ -982,7 +1049,8 @@ candidatesContainer.addEventListener("click", async (event) => {
 
     if (approveButton) {
       const result = await approveCandidate(candidateId);
-      replaceCandidate(result.candidate);
+      const updatedCandidate = await fetchCandidate(candidateId);
+      replaceCandidate(updatedCandidate);
       syncImportBatchStatusFromCandidates();
       renderImportMetadata();
       setApprovedEventViewDate(result.event);

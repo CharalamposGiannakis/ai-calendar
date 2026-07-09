@@ -248,6 +248,58 @@ button:hover {
   color: #991b1b;
 }
 
+.candidate-warnings {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 12px 0;
+}
+
+.candidate-warning {
+  border: 1px solid #f59e0b;
+  border-left: 5px solid #f59e0b;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fffbeb;
+}
+
+.candidate-warning.warning-duplicate {
+  border-color: #e11d48;
+  border-left-color: #e11d48;
+  background: #fff1f2;
+}
+
+.candidate-warning.warning-conflict {
+  border-color: #f59e0b;
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.warning-toprow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.warning-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.candidate-warning p {
+  margin: 6px 0 0 0;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
 .candidate-edit-grid,
 .candidate-time-grid {
   display: grid;
