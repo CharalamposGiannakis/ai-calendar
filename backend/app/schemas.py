@@ -90,6 +90,62 @@ class ExcelRowExtractionResponse(BaseModel):
     row_preview: list[ExtractedRowPreview]
 
 
+class CandidateEventRead(BaseModel):
+    id: int
+    import_batch_id: int
+    import_row_id: int
+    source_row_index: int
+    title: str
+    description: str | None = None
+    all_day: bool
+    start_datetime: datetime | None = None
+    end_datetime: datetime | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    timezone_name: str | None = None
+    location: str | None = None
+    category_id: int | None = None
+    review_status: str
+    was_edited: bool
+    review_notes: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    @field_serializer("start_datetime", "end_datetime", when_used="json")
+    def serialize_utc_datetime(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+        return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+class CandidatePreview(BaseModel):
+    import_row_id: int
+    source_row_index: int
+    title: str
+    all_day: bool
+    start_datetime: datetime | None = None
+    end_datetime: datetime | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    timezone_name: str | None = None
+    category_id: int | None = None
+
+    @field_serializer("start_datetime", "end_datetime", when_used="json")
+    def serialize_utc_datetime(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+        return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+class ExcelCandidateGenerationResponse(BaseModel):
+    batch_id: int
+    rows_inspected: int
+    candidates_created: int
+    rows_skipped: int
+    rows_failed: int
+    candidate_preview: list[CandidatePreview]
+
+
 def normalize_event_shape(data: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(data)
     all_day = normalized.get("all_day", False)
