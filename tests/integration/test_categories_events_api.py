@@ -1,3 +1,8 @@
+import pytest
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
+
+
 def timed_payload(
     title="Synthetic timed event",
     start="2026-01-15T09:00:00",
@@ -182,6 +187,27 @@ def test_reject_nonexistent_category_id(client):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "category_id does not exist."
+
+
+def test_sqlite_rejects_invalid_foreign_key(test_engine):
+    with test_engine.connect() as connection:
+        assert connection.scalar(text("PRAGMA foreign_keys")) == 1
+
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO events (
+                        title, all_day, start_datetime, end_datetime,
+                        timezone_name, category_id, source_type, status
+                    ) VALUES (
+                        'Synthetic foreign key check', 0,
+                        '2026-01-15 08:00:00', '2026-01-15 09:00:00',
+                        'Europe/Amsterdam', 999999, 'manual', 'active'
+                    )
+                    """
+                )
+            )
 
 
 def test_one_day_all_day_event_round_trip(client):

@@ -1,6 +1,6 @@
 # AI Calendar - Current Project Status
 
-**Last updated:** 10 July 2026
+**Last updated:** 19 July 2026
 **Current phase:** Manual-calendar vertical slice with frontend import warning display
 
 ## Implemented
@@ -37,6 +37,9 @@
 
 * `frontend/` remains the single editable frontend source
 * one FastAPI server serves frontend and API for laptop and phone use
+* startup binds to localhost by default; explicit `-Lan` mode enables phone access with a network exposure warning
+* application and integration-test SQLite engines enforce foreign-key constraints on every connection
+* same-origin frontend/API serving no longer carries unnecessary broad CORS middleware
 * timed event forms use Amsterdam local inputs; all-day forms use an inclusive Last Day field
 * minimal Excel import-review UI for upload, row extraction, candidate generation, candidate editing, rejection, and approval
 * frontend duplicate and conflict warning display on import candidate cards
@@ -50,7 +53,7 @@
 
 ## Verification completed
 
-* 81 isolated integration tests pass, covering API time semantics, DST behavior, upload storage, Excel raw-row extraction, Excel candidate generation, candidate review/approval, import candidate warnings, import metadata creation, migration conversion, constraints, and import-schema downgrade
+* 82 isolated integration tests pass, covering API time semantics, DST behavior, SQLite foreign-key enforcement, upload storage, Excel raw-row extraction, Excel candidate generation, candidate review/approval, import candidate warnings, import metadata creation, migration conversion, constraints, and import-schema downgrade
 * Alembic upgrade, check, and downgrade pass on temporary SQLite databases
 * a disposable copy of the development database upgraded to `20260623_0003` with 5 retained events: 3 all-day, 2 timed, and 5 valid time shapes
 * Python compilation and frontend single-source checks pass

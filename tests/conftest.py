@@ -6,7 +6,6 @@ from alembic import command
 from alembic.config import Config
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +13,7 @@ BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.db import get_db  # noqa: E402
+from app.db import create_database_engine, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.seed import seed_default_categories  # noqa: E402
 
@@ -36,15 +35,20 @@ def run_migrations(database_url):
 
 
 @pytest.fixture
-def client(tmp_path):
+def test_engine(tmp_path):
     database_path = tmp_path / "test_ai_calendar.db"
     database_url = f"sqlite:///{database_path.as_posix()}"
     run_migrations(database_url)
 
-    test_engine = create_engine(
-        database_url,
-        connect_args={"check_same_thread": False},
-    )
+    database_engine = create_database_engine(database_url)
+    try:
+        yield database_engine
+    finally:
+        database_engine.dispose()
+
+
+@pytest.fixture
+def client(test_engine):
     TestingSessionLocal = sessionmaker(
         autocommit=False,
         autoflush=False,
@@ -73,4 +77,3 @@ def client(tmp_path):
     finally:
         test_client.close()
         app.dependency_overrides.clear()
-        test_engine.dispose()

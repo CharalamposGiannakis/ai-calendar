@@ -1,3 +1,8 @@
+[CmdletBinding()]
+param(
+    [switch]$Lan
+)
+
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $BackendPath = Join-Path $ProjectRoot "backend"
 $ActivateScript = Join-Path $BackendPath ".venv\Scripts\Activate.ps1"
@@ -55,4 +60,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Set-Location $BackendPath
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+$BindHost = if ($Lan) { "0.0.0.0" } else { "127.0.0.1" }
+
+if ($Lan) {
+    Write-Warning "LAN mode exposes the calendar write API to other devices on this network. Use it only on a trusted network."
+}
+
+uvicorn app.main:app --reload --host $BindHost --port 8000

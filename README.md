@@ -24,7 +24,7 @@ As a public portfolio project, the emphasis is on building the careful foundatio
 * Dynamic backend duplicate and conflict warnings for import candidates
 * Minimal frontend Excel import-review workflow from upload through approval, including candidate warning display
 * Responsive, same-origin web interface for creating, editing, deleting, and viewing events
-* One-server startup that works locally and on a phone connected to the same network
+* One-server startup with local-only and explicit LAN modes
 * GitHub Actions CI for integration tests and backend compilation
 * Isolated pytest coverage for API time semantics and migration workflows
 
@@ -82,7 +82,15 @@ The startup script applies migrations before it launches Uvicorn. A fresh databa
 .\scripts\run_app.ps1
 ```
 
-Open `http://127.0.0.1:8000` on the laptop. The same server listens on the local network, so a phone on the same Wi-Fi can use `http://<laptop-lan-ip>:8000`.
+By default, the server listens only on the laptop. Open `http://127.0.0.1:8000` locally.
+
+For phone testing, start the app in explicit LAN mode:
+
+```powershell
+.\scripts\run_app.ps1 -Lan
+```
+
+Then open `http://<laptop-lan-ip>:8000` from a phone on the same network. LAN mode exposes the calendar write API to other devices on that network, so use it only on a trusted network and stop the server when testing is finished.
 
 ## Testing
 
